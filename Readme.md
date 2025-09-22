@@ -183,9 +183,3 @@ npm run test:watch
 ## 📄 License
 
 This project is licensed under the MIT License.
-
-## 🆘 Support
-
-- **Documentation**: http://localhost:3000/api-docs
-- **Issues**: GitHub Issues
-- **Email**: support@trackingapi.com
