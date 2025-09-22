@@ -1,0 +1,1039 @@
+{
+  "info": {
+    "name": "Tracking API Collection",
+    "description": "Comprehensive e-commerce tracking API with real-time updates and multi-carrier support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tracking_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/../health",
+          "host": ["{{base_url}}"],
+          "path": ["..", "health"]
+        }
+      }
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                  "    pm.collectionVariables.set('user_id', response.data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"buyer\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                  "    pm.collectionVariables.set('user_id', response.data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John Updated\",\n  \"lastName\": \"Doe Updated\",\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products?page=1&limit=10&sort=createdAt&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/search?q=wireless&category=electronics&minPrice=50&maxPrice=500",
+              "host": ["{{base_url}}"],
+              "path": ["products", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "wireless"
+                },
+                {
+                  "key": "category",
+                  "value": "electronics"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "50"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "500"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Featured Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/featured?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["products", "featured"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('product_id', response.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Bluetooth Headphones\",\n  \"description\": \"High-quality wireless headphones with noise cancellation and 30-hour battery life.\",\n  \"shortDescription\": \"Premium wireless headphones\",\n  \"sku\": \"WBH-001\",\n  \"category\": \"507f1f77bcf86cd799439011\",\n  \"brand\": \"TechBrand\",\n  \"price\": {\n    \"current\": 199.99,\n    \"original\": 249.99,\n    \"currency\": \"USD\"\n  },\n  \"images\": [\n    {\n      \"url\": \"https://example.com/image1.jpg\",\n      \"alt\": \"Headphones front view\",\n      \"isPrimary\": true,\n      \"order\": 0\n    }\n  ],\n  \"attributes\": [\n    {\n      \"name\": \"Color\",\n      \"value\": \"Black\",\n      \"type\": \"color\"\n    },\n    {\n      \"name\": \"Battery Life\",\n      \"value\": \"30 hours\",\n      \"type\": \"text\"\n    }\n  ],\n  \"inventory\": {\n    \"quantity\": 100,\n    \"lowStockThreshold\": 10,\n    \"trackQuantity\": true,\n    \"allowBackorder\": false\n  },\n  \"dimensions\": {\n    \"length\": 20,\n    \"width\": 15,\n    \"height\": 8,\n    \"unit\": \"cm\",\n    \"weight\": {\n      \"value\": 0.3,\n      \"unit\": \"kg\"\n    }\n  },\n  \"tags\": [\"electronics\", \"audio\", \"wireless\", \"bluetooth\"],\n  \"status\": \"active\",\n  \"visibility\": \"public\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": ["{{base_url}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Bluetooth Headphones Pro\",\n  \"price\": {\n    \"current\": 179.99\n  },\n  \"inventory\": {\n    \"quantity\": 150\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Product Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"507f1f77bcf86cd799439012\",\n  \"quantity\": 200,\n  \"operation\": \"set\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/{{product_id}}/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["products", "{{product_id}}", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Reserve Product Inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2,\n  \"orderId\": \"{{order_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/{{product_id}}/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["products", "{{product_id}}", "reserve"]
+            }
+          }
+        },
+        {
+          "name": "Get Low Stock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/low-stock/mine",
+              "host": ["{{base_url}}"],
+              "path": ["products", "low-stock", "mine"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["products", "{{product_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('order_id', response.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product\": \"{{product_id}}\",\n      \"quantity\": 2,\n      \"attributes\": [\n        {\n          \"name\": \"Color\",\n          \"value\": \"Black\"\n        }\n      ]\n    }\n  ],\n  \"shipping\": {\n    \"address\": {\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"company\": \"Tech Corp\",\n      \"street\": \"123 Main Street\",\n      \"city\": \"New York\",\n      \"state\": \"NY\",\n      \"zipCode\": \"10001\",\n      \"country\": \"USA\",\n      \"phone\": \"+1234567890\"\n    },\n    \"method\": \"standard\",\n    \"carrier\": \"ups\",\n    \"notes\": \"Please leave at front door\"\n  },\n  \"billing\": {\n    \"useShippingAddress\": true\n  },\n  \"payment\": {\n    \"method\": \"stripe\"\n  },\n  \"notes\": {\n    \"customer\": \"Please deliver after 5 PM\",\n    \"internal\": \"High priority customer\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders?page=1&limit=10&sort=createdAt&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Order Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "summary"]
+            }
+          }
+        },
+        {
+          "name": "Get Order Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/timeline",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "timeline"]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"notes\": \"Order confirmed and payment processed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Ship Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/ship",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "ship"]
+            }
+          }
+        },
+        {
+          "name": "Deliver Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/deliver",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "deliver"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Process Return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"defective\",\n  \"description\": \"Product arrived damaged\",\n  \"items\": [\n    {\n      \"product\": \"{{product_id}}\",\n      \"quantity\": 1,\n      \"reason\": \"Damaged during shipping\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/return",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "return"]
+            }
+          }
+        },
+        {
+          "name": "Get Order Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/statistics?fromDate=2024-01-01&toDate=2024-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "statistics"],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracking",
+      "item": [
+        {
+          "name": "Get Tracking by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Tracking Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/timeline",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "timeline"]
+            }
+          }
+        },
+        {
+          "name": "Get Tracking Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "summary"]
+            }
+          }
+        },
+        {
+          "name": "Create Tracking Log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('tracking_id', response.data.trackingId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order\": \"{{order_id}}\",\n  \"carrier\": {\n    \"name\": \"ups\",\n    \"trackingNumber\": \"1Z999AA1234567890\",\n    \"service\": \"UPS Ground\",\n    \"accountNumber\": \"123456\"\n  },\n  \"estimatedDelivery\": \"2024-12-31T18:00:00.000Z\",\n  \"metadata\": {\n    \"packageWeight\": 2.5,\n    \"packageDimensions\": {\n      \"length\": 30,\n      \"width\": 20,\n      \"height\": 15,\n      \"unit\": \"cm\"\n    },\n    \"specialInstructions\": \"Handle with care\",\n    \"insuranceValue\": 500,\n    \"declaredValue\": 199.99,\n    \"customsValue\": 199.99,\n    \"customsDescription\": \"Electronics\",\n    \"hazardousMaterials\": false,\n    \"temperatureControlled\": false,\n    \"fragile\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking",
+              "host": ["{{base_url}}"],
+              "path": ["tracking"]
+            }
+          }
+        },
+        {
+          "name": "Add Tracking Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_transit\",\n  \"description\": \"Package is in transit to destination\",\n  \"location\": {\n    \"name\": \"Distribution Center\",\n    \"address\": {\n      \"city\": \"New York\",\n      \"state\": \"NY\",\n      \"zipCode\": \"10001\",\n      \"country\": \"USA\"\n    },\n    \"coordinates\": {\n      \"latitude\": 40.7128,\n      \"longitude\": -74.0060\n    }\n  },\n  \"details\": {\n    \"carrier\": \"ups\",\n    \"facility\": \"JFK Distribution Center\"\n  },\n  \"isDelivered\": false,\n  \"isException\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "events"]
+            }
+          }
+        },
+        {
+          "name": "Update Tracking Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"description\": \"Package is out for delivery\",\n  \"location\": {\n    \"name\": \"Local Distribution Center\",\n    \"address\": {\n      \"city\": \"New York\",\n      \"state\": \"NY\",\n      \"zipCode\": \"10001\",\n      \"country\": \"USA\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get All Tracking Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking?page=1&limit=10&status=in_transit",
+              "host": ["{{base_url}}"],
+              "path": ["tracking"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "in_transit"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Tracking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/search?q=1Z999AA1234567890&carrier=ups",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "1Z999AA1234567890"
+                },
+                {
+                  "key": "carrier",
+                  "value": "ups"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Delayed Shipments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/delayed/all",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "delayed", "all"]
+            }
+          }
+        },
+        {
+          "name": "Add Exception",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"weather_delay\",\n  \"description\": \"Delivery delayed due to severe weather conditions\",\n  \"severity\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/exceptions",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "exceptions"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Predictions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_id}}/predictions",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_id}}", "predictions"]
+            }
+          }
+        },
+        {
+          "name": "Get Tracking Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/analytics?fromDate=2024-01-01&toDate=2024-12-31&carrier=ups",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "analytics"],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "carrier",
+                  "value": "ups"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Test Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"test\",\n  \"data\": {\n    \"message\": \"Test webhook payload\",\n    \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/test",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "test"]
+            }
+          }
+        },
+        {
+          "name": "Carrier Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"ups\",\n  \"trackingNumber\": \"1Z999AA1234567890\",\n  \"status\": \"delivered\",\n  \"description\": \"Package delivered successfully\",\n  \"location\": {\n    \"name\": \"Customer Address\",\n    \"address\": {\n      \"city\": \"New York\",\n      \"state\": \"NY\",\n      \"zipCode\": \"10001\",\n      \"country\": \"USA\"\n    }\n  },\n  \"timestamp\": \"2024-01-01T18:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/carrier",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "carrier"]
+            }
+          }
+        },
+        {
+          "name": "UPS Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNumber\": \"1Z999AA1234567890\",\n  \"status\": \"IN_TRANSIT\",\n  \"description\": \"Package is in transit\",\n  \"location\": {\n    \"facilityName\": \"UPS Distribution Center\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"postalCode\": \"10001\",\n    \"country\": \"US\"\n  },\n  \"timestamp\": \"2024-01-01T12:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/ups",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "ups"]
+            }
+          }
+        },
+        {
+          "name": "FedEx Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNumber\": \"1234567890123\",\n  \"status\": \"IN_TRANSIT\",\n  \"description\": \"Package is in transit\",\n  \"location\": {\n    \"city\": \"New York\",\n    \"stateOrProvinceCode\": \"NY\",\n    \"postalCode\": \"10001\",\n    \"countryCode\": \"US\"\n  },\n  \"timestamp\": \"2024-01-01T12:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/fedex",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "fedex"]
+            }
+          }
+        },
+        {
+          "name": "Payment Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"status\": \"completed\",\n  \"transactionId\": \"pi_1234567890\",\n  \"amount\": 441.97,\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/payment",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "payment"]
+            }
+          }
+        },
+        {
+          "name": "Inventory Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "{{webhook_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"warehouseId\": \"507f1f77bcf86cd799439012\",\n  \"quantity\": 50,\n  \"operation\": \"add\",\n  \"reason\": \"Stock replenishment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "inventory"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
