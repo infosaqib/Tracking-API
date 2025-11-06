@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
