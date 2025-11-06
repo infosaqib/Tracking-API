@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "VendorCompanyType" AS ENUM ('CORPORATIONS', 'LIMITED_LIABILITY_COMPANY', 'NON_PROFIT', 'PARTNERSHIPS', 'S_CORPORATIONS', 'SOLE_PROPRIETORSHIPS');
+
+-- AlterTable
+ALTER TABLE "Vendors" ADD COLUMN     "companyType" "VendorCompanyType";

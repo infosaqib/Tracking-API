@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Roles" ADD COLUMN     "roleLevel" INTEGER NOT NULL DEFAULT 0;

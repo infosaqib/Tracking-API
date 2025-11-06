@@ -1,0 +1,1520 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+// generator dbml {
+//     provider = "prisma-dbml-generator"
+// }
+
+datasource db {
+    provider          = "postgresql"
+    url               = env("DATABASE_URL")
+    shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum UserStatus {
+    ACTIVE
+    INACTIVE
+    PENDING
+}
+
+enum TenantTypes {
+    CLIENT
+    VENDOR
+    VENDOR_BRANCH
+    VENDOR_FRANCHISE
+    PROPERTY_GROUP
+}
+
+enum PermissionTypes {
+    CLIENT_PERMISSION
+    VENDOR_PERMISSION
+    STAFF_PERMISSION
+}
+
+enum ClientTypes {
+    COMMERCIAL
+    HOA
+    HOTEL
+    MULTI_FAMILY
+    RETAIL
+    STUDENT_HOUSING
+}
+
+enum ClientContactStatus {
+    AVAILABLE
+    NOT_AVAILABLE
+    NOT_REACHABLE
+}
+
+enum PropertyBuildingTypes {
+    GARDEN_STYLE
+    MIDRISE
+    HIGHRISE
+}
+
+enum PropertyStatuses {
+    ACTIVE
+    INACTIVE
+}
+
+enum VendorStages {
+    ONBOARDING
+    CNX_APPROVED
+    CNX_NOT_APPROVED
+    CHANGING_INFO
+    APPLYING
+    IN_ACTIVE
+}
+
+enum VendorStatuses {
+    ACTIVE
+    DRAFT
+    INACTIVE
+}
+
+// Tables
+model Tenants {
+    id             String      @id @default(uuid())
+    name           String
+    type           TenantTypes
+    client         Client?     @relation(fields: [clientId], references: [id], name: "tenatClientId")
+    clientId       String?
+    vendor         Vendors?    @relation(fields: [vendorId], references: [id])
+    vendorId       String?
+    // Parent-child relationship
+    parentTenant   Tenants?    @relation("ParentChildTenant", fields: [parentTenantId], references: [id])
+    parentTenantId String?
+    childTenants   Tenants[]   @relation("ParentChildTenant")
+    // Time Stamps
+    createdAt      DateTime    @default(now())
+    modifiedAt     DateTime    @updatedAt()
+    // Created And Updated
+    creatorId      String?
+    creator        Users?      @relation(fields: [creatorId], references: [id], name: "tenatCreatorId")
+    updater        Users?      @relation(fields: [updaterId], references: [id], name: "tenatupdaterId")
+    updaterId      String?
+    Roles          Roles[]
+
+    deletedAt   DateTime?
+    userTenants UserTenants[] @relation("UserTenantsTenant")
+
+    clientTenants    Client[]           @relation("clientTenant")
+    ClientProperties ClientProperties[] @relation("clientPropertyTenant")
+    vendors          Vendors[]          @relation("vendorTenant")
+
+    vendorNotes         VendorNotes[]         @relation("vendorNoteTenant")
+    vendorServices      VendorServices[]      @relation("vendorServiceTenant")
+    BackgroundJobs      BackgroundJobs[]
+    ServiceUnitCoverage ServiceUnitCoverage[]
+}
+
+enum ContactType {
+    PRIMARY_CONTACT
+    SECONDARY_CONTACT
+    ON_SITE_TEAM_USER
+}
+
+model Users {
+    id String @id @default(uuid())
+
+    email      String  @db.VarChar(250)
+    isInternal Boolean
+    title      String? @db.VarChar(50)
+
+    authorized         Boolean     @default(false)
+    status             UserStatus?
+    lastInviteId       String?
+    lastInviteSendTime DateTime?
+    firstName          String      @db.VarChar(255)
+    lastName           String      @db.VarChar(255)
+    fullName           String      @default("")
+    phoneCode          String?     @db.VarChar(20)
+    phoneExtension     String?     @db.VarChar(20)
+    phoneNumber        String?     @db.VarChar(20)
+    avatarUrl          String?
+
+    cognitoId String? @unique
+
+    itemsPerPage Int? @default(10)
+
+    // Creator And Updater
+    creatorId    String?
+    creator      Users?  @relation("CreatorAndUsers", fields: [creatorId], references: [id])
+    createdUsers Users[] @relation("CreatorAndUsers")
+
+    updaterId    String?
+    updater      Users?  @relation("UpdatedAndUsers", fields: [updaterId], references: [id])
+    updatedUsers Users[] @relation("UpdatedAndUsers")
+
+    // Time Stamps
+    createdAt  DateTime  @default(now())
+    modifiedAt DateTime  @updatedAt()
+    deletedAt  DateTime?
+
+    // Created And Updated
+    client                    Client[]             @relation("clientCreatorId")
+    updatedClients            Client[]             @relation("clientupdaterId")
+    clientProperties          ClientProperties[]   @relation("clientPropertyCreatorId")
+    updatedClientProperties   ClientProperties[]   @relation("clientPropertyupdaterId")
+    createdPropertyContacts   PropertyContacts[]   @relation("propertyContactCreatorId")
+    updatedPropertyContacts   PropertyContacts[]   @relation("propertyContactUpdaterId")
+    createduserRoles          UserRoles[]          @relation("userRolesCreatorId")
+    updatedUserRoles          UserRoles[]          @relation("userRolesUpdaterId")
+    userRoles                 UserRoles[]          @relation("userRolesUser")
+    roles                     Roles[]              @relation("roleCreatorId")
+    updatedRoles              Roles[]              @relation("roleupdaterId")
+    updatedTenants            Tenants[]            @relation("tenatupdaterId")
+    createdTenants            Tenants[]            @relation("tenatCreatorId")
+    updatedVendors            Vendors[]            @relation("vendorupdaterId")
+    vendors                   Vendors[]            @relation("vendorCreatorId")
+    permissions               Permissions[]        @relation("permissionCreatorId")
+    updatedPermissions        Permissions[]        @relation("permissionUpdaterId")
+    rolePermissions           RolePermissions[]    @relation("rolePermissionCreatorId")
+    updatedRolePermissions    RolePermissions[]    @relation("rolePermissionUpdaterId")
+    userTenants               UserTenants[]        @relation("UserTenantsUser")
+    createdUserTenants        UserTenants[]        @relation("UserTenantsCreatedBy")
+    modifiedUserTenants       UserTenants[]        @relation("UserTenantsModifiedBy")
+    managedProperties         ClientProperties[]   @relation("propertyManager")
+    propertyContacts          PropertyContacts[]   @relation("propertyContactUser")
+    servicesCreated           Services[]           @relation("serviceCreatorId")
+    servicesUpdated           Services[]           @relation("serviceUpdaterId")
+    propertyServiceMapCreated PropertyServiceMap[] @relation("mappedPropertyServiceCreatorId")
+    propertyServiceMapUpdated PropertyServiceMap[] @relation("mappedPropertyServiceUpdaterId")
+    vendorServicesCreated     VendorServices[]     @relation("vendorServiceCreatedBy")
+    vendorServicesUpdated     VendorServices[]     @relation("vendorServiceModifiedBy")
+    vendorNoteCreatedBy       VendorNotes[]        @relation("vendorNoteCreatedBy")
+    vendorNoteUpdatedBy       VendorNotes[]        @relation("vendorNoteModifiedBy")
+    serviceApprovedByUser     Services[]           @relation("serviceApprovedByUser")
+
+    vendorServicableAreasCreatedBy VendorServicableAreas[] @relation("vendorServicableAreaCreatedBy")
+    vendorServicableAreasUpdatedBy VendorServicableAreas[] @relation("vendorServicableAreaModifiedBy")
+
+    backgroundJobsCreatedBy  BackgroundJobs[] @relation("backgroundJobCreatedBy")
+    backgroundJobsModifiedBy BackgroundJobs[] @relation("backgroundJobModifiedBy")
+
+    // Contract relations
+    contractsCreated          Contracts[]                @relation("contractCreatedBy")
+    contractsModified         Contracts[]                @relation("contractModifiedBy")
+    contractServicesCreated   PropertyContractServices[] @relation("contractServiceCreatedBy")
+    contractServicesModified  PropertyContractServices[] @relation("contractServiceModifiedBy")
+    propertyContractsCreated  PropertyContracts[]        @relation("propertyContractCreatedBy")
+    propertyContractsModified PropertyContracts[]        @relation("propertyContractModifiedBy")
+
+    // Vendor relations
+    vendorAccountants Vendors[] @relation("vendorAccountantId")
+
+    // Scope of Work relations
+    scopeOfWorkCreated           ScopeOfWork[]        @relation("scopeOfWorkCreatedBy")
+    scopeOfWorkModified          ScopeOfWork[]        @relation("scopeOfWorkModifiedBy")
+    scopeOfWorkVersionCreatedBy  ScopeOfWorkVersion[] @relation("scopeOfWorkVersionCreatedBy")
+    scopeOfWorkVersionModifiedBy ScopeOfWorkVersion[] @relation("scopeOfWorkVersionModifiedBy")
+    scopeOfWorkVersionUploadedBy ScopeOfWorkVersion[] @relation("scopeOfWorkVersionUploadedBy")
+
+    // RFP related relations
+    rfpsCreatedBy                   Rfps[]                    @relation("rfpCreatedBy")
+    rfpsUpdatedBy                   Rfps[]                    @relation("rfpUpdatedBy")
+    rfpPropertiesCreatedBy          RfpProperties[]           @relation("rfpPropertyCreatedBy")
+    rfpPropertiesUpdatedBy          RfpProperties[]           @relation("rfpPropertyUpdatedBy")
+    rfpPropertyAttachmentsCreatedBy RfpPropertyAttachments[]  @relation("rfpPropertyAttachmentCreatedBy")
+    rfpPropertyAttachmentsUpdatedBy RfpPropertyAttachments[]  @relation("rfpPropertyAttachmentUpdatedBy")
+    rfpDocumentsCreatedBy           RfpDocuments[]            @relation("rfpDocumentCreatedBy")
+    rfpDocumentsUpdatedBy           RfpDocuments[]            @relation("rfpDocumentUpdatedBy")
+    rfpScopeOfWorkCreatedBy         RfpScopeOfWork[]          @relation("rfpScopeOfWorkCreatedBy")
+    rfpScopeOfWorkUpdatedBy         RfpScopeOfWork[]          @relation("rfpScopeOfWorkUpdatedBy")
+    rfpSendLogsCreatedBy            RfpSendLog[]              @relation("rfpSendLogCreatedBy")
+    rfpSendLogsUpdatedBy            RfpSendLog[]              @relation("rfpSendLogUpdatedBy")
+    rfpSendRecipientsCreatedBy      RfpSendRecipients[]       @relation("rfpSendRecipientCreatedBy")
+    rfpSendRecipientsUpdatedBy      RfpSendRecipients[]       @relation("rfpSendRecipientUpdatedBy")
+    templateGenerationTasksCreated  TemplateGenerationTasks[] @relation("templateGenerationTaskCreatedBy")
+    templateGenerationTasksUpdated  TemplateGenerationTasks[] @relation("templateGenerationTaskUpdatedBy")
+
+    exportBackgroundJobsCreatedBy    ExportBackgroundJobs[]    @relation("exportBackgroundJobCreatedBy")
+    exportBackgroundJobsUpdatedBy    ExportBackgroundJobs[]    @relation("exportBackgroundJobUpdatedBy")
+    createdClientNotApprovedVendors  ClientNotApprovedVendor[] @relation("ClientNotApprovedVendorCreatedBy")
+    modifiedClientNotApprovedVendors ClientNotApprovedVendor[] @relation("ClientNotApprovedVendorModifiedBy")
+}
+
+model Roles {
+    id         String    @id @default(uuid())
+    tenant     Tenants?  @relation(fields: [tenantsId], references: [id])
+    name       String    @db.VarChar(100)
+    readOnly   Boolean   @default(false)
+    roleLevel  Int       @default(2) // ("1: Super Admin, 2: Admin, 3: Non admin users")
+    deletedAt  DateTime?
+    // Time Stamps
+    createdAt  DateTime  @default(now())
+    modifiedAt DateTime  @updatedAt()
+
+    // Created And Updated
+    creator         Users?            @relation(fields: [creatorId], references: [id], name: "roleCreatorId")
+    creatorId       String?
+    updater         Users?            @relation(fields: [updaterId], references: [id], name: "roleupdaterId")
+    updaterId       String?
+    tenantsId       String?
+    rolePermissions RolePermissions[]
+    userRoles       UserRoles[]       @relation("userRolesRole")
+
+    @@unique([name, tenantsId], name: "uniqueRoleName")
+}
+
+model UserRoles {
+    user   Users  @relation(fields: [userId], references: [id], name: "userRolesUser")
+    userId String
+
+    role   Roles  @relation(fields: [roleId], references: [id], name: "userRolesRole")
+    roleId String
+
+    // Time Stamps
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    // Created And Updated
+    creator   Users?  @relation(fields: [creatorId], references: [id], name: "userRolesCreatorId")
+    creatorId String?
+    updater   Users?  @relation(fields: [updaterId], references: [id], name: "userRolesUpdaterId")
+    updaterId String?
+
+    @@id([userId, roleId])
+}
+
+model Permissions {
+    id String @id @default(uuid())
+
+    module              PermissionModules @relation(fields: [permissionModulesId], references: [id])
+    permissionModulesId String
+
+    // Time Stamps
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+    // Created And Updated
+    creator    Users    @relation(fields: [creatorId], references: [id], name: "permissionCreatorId")
+    creatorId  String
+    updater    Users    @relation(fields: [updaterId], references: [id], name: "permissionUpdaterId")
+    updaterId  String
+}
+
+model RolePermissions {
+    role          Roles    @relation(fields: [rolesId], references: [id])
+    rolesId       String
+    permissionsId String
+    // Time Stamps
+    createdAt     DateTime @default(now())
+    modifiedAt    DateTime @updatedAt()
+    // Created And Updated
+    creator       Users?   @relation(fields: [creatorId], references: [id], name: "rolePermissionCreatorId")
+    creatorId     String?
+    updater       Users?   @relation(fields: [updaterId], references: [id], name: "rolePermissionUpdaterId")
+    updaterId     String?
+
+    @@unique([rolesId, permissionsId])
+}
+
+enum ClientStatus {
+    ACTIVE
+    INACTIVE
+}
+
+model Client {
+    id      String       @id @default(uuid())
+    name    String
+    type    ClientTypes? @default(HOA)
+    logoUrl String?
+
+    legalName           String  @default("") @db.VarChar(500)
+    description         String? @db.Text
+    onlyApprovedVendors Boolean @default(false)
+    nonApprovedVendors  Boolean @default(false)
+    website             String? @db.Text
+
+    themeHeaderImageUrl String?
+
+    status ClientStatus @default(ACTIVE)
+
+    tenant   Tenants? @relation("clientTenant", fields: [tenantId], references: [id])
+    tenantId String?
+
+    // Time Stamps
+    deletedAt             DateTime?
+    createdAt             DateTime                @default(now())
+    modifiedAt            DateTime                @updatedAt()
+    // Created And Updated
+    creator               Users?                  @relation(fields: [creatorId], references: [id], name: "clientCreatorId")
+    creatorId             String?
+    updater               Users?                  @relation(fields: [updaterId], references: [id], name: "clientupdaterId")
+    updaterId             String?
+    tenants               Tenants[]               @relation("tenatClientId")
+    clientProperties      ClientProperties[]      @relation("clientPropertyClientId")
+    ApprovedClientVendors ApprovedClientVendors[]
+    scopeOfWork           ScopeOfWork[]
+
+    // RFP relations
+    rfps                     Rfps[]
+    ClientNotApprovedVendors ClientNotApprovedVendor[]
+    Vendors                  Vendors[]
+}
+
+enum HOAType {
+    SF
+    CONDOS
+    TOWNHOMES
+}
+
+enum StudentHousingType {
+    ON_CAMPUS
+    OFF_CAMPUS
+    SFR
+    DORMITORY
+}
+
+enum BuildingClassification {
+    CLASS_A
+    CLASS_B
+    CLASS_C
+    CLASS_D
+}
+
+enum CommercialType {
+    RETAIL
+    OFFICE
+    INDUSTRIAL
+    MIXED_USE
+}
+
+enum MultiFamilyBuildingTypes {
+    GARDEN_STYLE
+    MIDRISE
+    HIGH_RISE
+    SFR
+}
+
+model ClientProperties {
+    id                 String                @id @default(uuid())
+    clientId           String
+    name               String                @db.VarChar(250)
+    address            String?
+    unitCount          Int
+    buildingCount      Int
+    type               PropertyBuildingTypes
+    floorCount         Int
+    note               String?
+    locationCordinates String?
+    isRetail           Boolean
+    isRetailScope      Boolean
+    status             PropertyStatuses      @default(ACTIVE)
+    createdAt          DateTime              @default(now())
+    modifiedAt         DateTime              @updatedAt
+    creatorId          String
+    updaterId          String
+    stateId            String
+    countryId          String
+    acres              Float?
+    legalName          String?               @db.VarChar(250)
+    zip                String?
+    cityId             String?
+    countyId           String?
+    latitude           Float?
+    longitude          Float?
+    propertyManagerId  String?
+    tenantId           String?
+    website            String?
+    country            Countries             @relation(fields: [countryId], references: [id])
+    creator            Users                 @relation("clientPropertyCreatorId", fields: [creatorId], references: [id])
+    city               Cities?               @relation(fields: [cityId], references: [id])
+    county             County?               @relation(fields: [countyId], references: [id])
+    client             Client                @relation("clientPropertyClientId", fields: [clientId], references: [id])
+    propertyManager    Users?                @relation("propertyManager", fields: [propertyManagerId], references: [id])
+    state              States                @relation(fields: [stateId], references: [id])
+    tenant             Tenants?              @relation(fields: [tenantId], references: [id], name: "clientPropertyTenant")
+    updater            Users                 @relation("clientPropertyupdaterId", fields: [updaterId], references: [id])
+
+    deletedAt          DateTime?
+    PropertyContacts   PropertyContacts[]   @relation("propertyContactProperty")
+    propertyServiceMap PropertyServiceMap[] @relation("mappedPropertyServiceProperty")
+
+    yearBuilt Int?
+
+    // Fields for HOA
+    hoaType       HOAType?
+    numberOfDoors Int?
+
+    // Fields for Multifamily/Apartments
+    buildingClassification  BuildingClassification?
+    market                  String?
+    numberOfUnits           Int?
+    multiFamilyBuildingType MultiFamilyBuildingTypes?
+
+    // Fields for Commercial/Retail
+    commercialType           CommercialType?
+    commercialClassification BuildingClassification?
+    grossSquareFootage       Float?
+    rentableSquareFootage    Float?
+
+    // Fields for Student Housing
+    studentHousingType  StudentHousingType?
+    numberOfBeds        Int?
+    PropertyContracts   PropertyContracts[]
+    ScopeOfWorkProperty ScopeOfWorkProperty[]
+
+    // RFP relations
+    rfpProperties          RfpProperties[]
+    rfpPropertyAttachments RfpPropertyAttachments[]
+}
+
+model PropertyContacts {
+    id         String           @id @default(uuid())
+    propertyId String
+    property   ClientProperties @relation(fields: [propertyId], references: [id], name: "propertyContactProperty")
+
+    user   Users  @relation(fields: [userId], references: [id], name: "propertyContactUser")
+    userId String
+
+    // Time Stamps
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    // Created And Updated
+    creator   Users  @relation(fields: [creatorId], references: [id], name: "propertyContactCreatorId")
+    creatorId String
+    updater   Users  @relation(fields: [updaterId], references: [id], name: "propertyContactUpdaterId")
+    updaterId String
+
+    @@unique([userId, propertyId])
+}
+
+enum VendorUnionTypes {
+    NON_UNION
+    UNION
+    BOTH
+}
+
+enum VendorOwnership {
+    FAMILY_OWNED
+    MINORITY_OWNED
+    VETERAN_OWNED
+    WOMAN_OWNED
+}
+
+enum VendorRegistrationType {
+    SELF
+    CONNEXUS
+    CLIENT_ONBOARDED
+}
+
+enum VendorCompanyType {
+    CORPORATIONS
+    LIMITED_LIABILITY_COMPANY
+    NON_PROFIT
+    PARTNERSHIPS
+    S_CORPORATIONS
+    SOLE_PROPRIETORSHIPS
+}
+
+model Vendors {
+    id   String  @id @default(uuid())
+    name String
+    logo String?
+
+    stage               VendorStages       @default(APPLYING)
+    address             String?
+    recognition         String?
+    certInsurance       String?
+    certInsuranceExpiry DateTime?
+    note                String?
+    companyType         VendorCompanyType?
+    parentCompany       Vendors?           @relation(fields: [parentCompanyId], references: [id], name: "vendorParentCompanyId")
+    parentCompanyId     String?
+    childCompanies      Vendors[]          @relation("vendorParentCompanyId")
+
+    vendorSource                      String?
+    vendorLegalName                   String?
+    vendorW9Url                       String?
+    vendorOwnership                   VendorOwnership[]      @default([])
+    vendorExperience                  Int?
+    vendorSocialSecurityNumber        String?
+    vendorServiceCoverContinentalUs   Boolean?
+    vendorInterestedReceiveRfpOutside Boolean?
+    vendorZip                         String?
+    vendorUnion                       VendorUnionTypes?
+    vendorEin                         String?
+    vendorWebsite                     String?
+    vendorRegistrationType            VendorRegistrationType @default(CONNEXUS)
+    vendorInsuranceNote               String?
+    vendorInsuranceExpiry             DateTime?
+    vendorInsuranceCertificate        String?
+
+    // TODO: ADd client id
+
+    accountantId String?
+    accountant   Users?  @relation(fields: [accountantId], references: [id], name: "vendorAccountantId")
+
+    tenantId String
+    tenant   Tenants        @relation(fields: [tenantId], references: [id], name: "vendorTenant")
+    status   VendorStatuses @default(ACTIVE)
+
+    city   Cities? @relation(fields: [cityId], references: [id])
+    cityId String?
+
+    state   States? @relation(fields: [stateId], references: [id])
+    stateId String?
+
+    county   County? @relation(fields: [countyId], references: [id])
+    countyId String?
+
+    country   Countries? @relation(fields: [countryId], references: [id])
+    countryId String?
+
+    // Time Stamps
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    // Created And Updated
+    creator   Users?  @relation(fields: [creatorId], references: [id], name: "vendorCreatorId")
+    creatorId String?
+
+    updater   Users?    @relation(fields: [updaterId], references: [id], name: "vendorupdaterId")
+    updaterId String?
+    Tenants   Tenants[]
+
+    vendorServices           VendorServices[]          @relation("vendorServiceVendor")
+    vendorNotes              VendorNotes[]             @relation("vendorNoteVendor")
+    vendorServicableAreas    VendorServicableAreas[]
+    Contracts                Contracts[]
+    ApprovedClientVendors    ApprovedClientVendors[]
+    ClientNotApprovedVendors ClientNotApprovedVendor[]
+
+    createdByClientId String?
+    createdByClient   Client? @relation(fields: [createdByClientId], references: [id])
+
+    // RFP relations
+    rfpSendRecipients RfpSendRecipients[]
+
+    @@index([tenantId, status])
+    @@index([stateId, status])
+    @@index([vendorServiceCoverContinentalUs])
+    @@index([vendorInterestedReceiveRfpOutside])
+}
+
+model PermissionModules {
+    id          String        @id @default(uuid())
+    name        String        @db.VarChar(250)
+    // Time Stamps
+    createdAt   DateTime      @default(now())
+    modifiedAt  DateTime      @updatedAt()
+    Permissions Permissions[]
+}
+
+model Countries {
+    id          String @id @default(uuid())
+    countryName String @db.VarChar(250)
+
+    placeId   String?
+    latitude  Float?
+    longitude Float?
+
+    isDeleted        Boolean            @default(false)
+    createdAt        DateTime           @default(now())
+    modifiedAt       DateTime           @updatedAt()
+    states           States[]
+    ClientProperties ClientProperties[]
+
+    Vendors               Vendors[]
+    VendorServicableAreas VendorServicableAreas[]
+
+    @@unique([countryName])
+}
+
+model States {
+    id        String @id @default(uuid())
+    stateName String @db.VarChar(250)
+
+    placeId   String?
+    latitude  Float?
+    longitude Float?
+
+    // Foreign Keys
+    countryId String
+    country   Countries @relation(fields: [countryId], references: [id])
+
+    // Common Fields
+    isDeleted             Boolean                 @default(false)
+    createdAt             DateTime                @default(now())
+    modifiedAt            DateTime                @updatedAt()
+    ClientProperties      ClientProperties[]
+    Cities                Cities[]
+    County                County[]
+    Vendors               Vendors[]
+    VendorServicableAreas VendorServicableAreas[]
+
+    @@unique([stateName, countryId])
+}
+
+model Cities {
+    id       String @id @default(uuid())
+    cityName String @db.VarChar(250)
+    state    States @relation(fields: [stateId], references: [id])
+    stateId  String
+    // geom     Unsupported("geometry(MultiPolygon, 4326)")?
+
+    placeId   String?
+    latitude  Float?
+    longitude Float?
+
+    // Common Fields
+    isDeleted             Boolean                 @default(false)
+    createdAt             DateTime                @default(now())
+    modifiedAt            DateTime                @updatedAt()
+    ClientProperties      ClientProperties[]
+    Vendors               Vendors[]
+    VendorServicableAreas VendorServicableAreas[]
+
+    @@unique([cityName, stateId])
+}
+
+enum TenantUserFilterTypes {
+    CLIENT
+    VENDOR
+    PROPERTY
+    MULTI_PROPERTY
+}
+
+model UserTenants {
+    user                 Users                 @relation("UserTenantsUser", fields: [userId], references: [id])
+    userId               String
+    tenant               Tenants               @relation("UserTenantsTenant", fields: [tenantId], references: [id])
+    tenantId             String
+    isPrimaryTenant      Boolean               @default(false)
+    createdAt            DateTime              @default(now())
+    modifiedAt           DateTime              @updatedAt
+    createdBy            Users?                @relation("UserTenantsCreatedBy", fields: [createdById], references: [id])
+    createdById          String?
+    modifiedBy           Users?                @relation("UserTenantsModifiedBy", fields: [modifiedById], references: [id])
+    modifiedById         String?
+    deletedAt            DateTime?
+    contactType          ContactType?
+    tenantUserFilterType TenantUserFilterTypes @default(CLIENT)
+
+    @@id([userId, tenantId])
+}
+
+enum ServiceStatus {
+    ACTIVE
+    INACTIVE
+}
+
+enum ServiceCategory {
+    CAPEX
+    COMMERCIAL
+    OPEX
+    OTHER
+}
+
+model ServiceCategories {
+    id        String     @id @default(uuid())
+    name      String
+    services  Services[]
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    deletedAt DateTime?
+}
+
+model Services {
+    id                 String                   @id @default(uuid())
+    servicesName       String
+    serviceDescription String?
+    search_vector      Unsupported("tsvector")?
+    serviceApprovedOn  DateTime?
+    status             ServiceStatus            @default(ACTIVE)
+    category           ServiceCategory          @default(OPEX)
+    deletedAt          DateTime?
+    createdAt          DateTime                 @default(now())
+    modifiedAt         DateTime                 @updatedAt()
+
+    categoryId      String?
+    serviceCategory ServiceCategories? @relation(fields: [categoryId], references: [id])
+
+    serviceApprovedByUser Users?  @relation(fields: [serviceApprovedById], references: [id], name: "serviceApprovedByUser")
+    serviceApprovedById   String?
+
+    // Self-referencing relation for parent-child hierarchy
+    parentService   Services?  @relation("ParentChildService", fields: [parentServiceId], references: [id])
+    parentServiceId String?
+    childServices   Services[] @relation("ParentChildService")
+
+    // Created and Updated
+    creatorId String
+    creator   Users   @relation(fields: [creatorId], references: [id], name: "serviceCreatorId")
+    updaterId String?
+    updater   Users?  @relation(fields: [updaterId], references: [id], name: "serviceUpdaterId")
+
+    propertyServiceMap  PropertyServiceMap[]       @relation("mappedPropertyServiceServices")
+    vendorServices      VendorServices[]           @relation("vendorServiceService")
+    contractServices    PropertyContractServices[]
+    scopeOfWork         ScopeOfWork[]
+    Rfps                Rfps[]
+    ServiceUnitCoverage ServiceUnitCoverage[]
+
+    @@unique([servicesName])
+    @@index([search_vector], map: "services_search_idx", type: Gin)
+}
+
+model PropertyServiceMap {
+    id         String   @id @default(uuid())
+    serviceId  String
+    propertyId String
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    // Created and Updated
+    creatorId String
+    creator   Users   @relation(fields: [creatorId], references: [id], name: "mappedPropertyServiceCreatorId")
+    updaterId String?
+    updater   Users?  @relation(fields: [updaterId], references: [id], name: "mappedPropertyServiceUpdaterId")
+
+    // Relations
+    service  Services         @relation(fields: [serviceId], references: [id], name: "mappedPropertyServiceServices")
+    property ClientProperties @relation(fields: [propertyId], references: [id], name: "mappedPropertyServiceProperty")
+}
+
+model County {
+    id   String @id @default(uuid())
+    name String
+    // geom Unsupported("geometry(MultiPolygon, 4326)")?
+
+    placeId   String?
+    latitude  Float?
+    longitude Float?
+
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    stateId               String
+    state                 States                  @relation(fields: [stateId], references: [id])
+    ClientProperties      ClientProperties[]
+    Vendors               Vendors[]
+    VendorServicableAreas VendorServicableAreas[]
+
+    @@unique([name, stateId])
+}
+
+enum VendorServiceType {
+    PRIMARY_SERVICE
+    ADDITIONAL_SERVICE
+}
+
+model VendorServices {
+    vendorId          String
+    serviceId         String
+    vendorServiceType VendorServiceType @default(PRIMARY_SERVICE)
+    createdAt         DateTime          @default(now())
+    modifiedAt        DateTime          @updatedAt()
+    createdById       String?
+    modifiedById      String?
+
+    vendor     Vendors  @relation(fields: [vendorId], references: [id], name: "vendorServiceVendor")
+    service    Services @relation(fields: [serviceId], references: [id], name: "vendorServiceService")
+    createdBy  Users?   @relation(fields: [createdById], references: [id], name: "vendorServiceCreatedBy")
+    modifiedBy Users?   @relation(fields: [modifiedById], references: [id], name: "vendorServiceModifiedBy")
+    tenant     Tenants? @relation(fields: [tenantId], references: [id], name: "vendorServiceTenant")
+    tenantId   String?
+
+    @@id([vendorId, serviceId])
+    @@index([serviceId, vendorServiceType, vendorId])
+}
+
+model VendorNotes {
+    id           String    @id @default(uuid())
+    vendorId     String
+    note         String
+    isDeleted    Boolean   @default(false)
+    createdAt    DateTime  @default(now())
+    modifiedAt   DateTime  @updatedAt()
+    createdById  String?
+    modifiedById String?
+    tenantId     String
+    deletedAt    DateTime?
+
+    vendor     Vendors @relation(fields: [vendorId], references: [id], name: "vendorNoteVendor")
+    createdBy  Users?  @relation(fields: [createdById], references: [id], name: "vendorNoteCreatedBy")
+    modifiedBy Users?  @relation(fields: [modifiedById], references: [id], name: "vendorNoteModifiedBy")
+    tenant     Tenants @relation(fields: [tenantId], references: [id], name: "vendorNoteTenant")
+}
+
+model VendorServicableAreas {
+    id String @id @default(uuid())
+
+    vendorId String
+    vendor   Vendors @relation(fields: [vendorId], references: [id])
+
+    countryId String
+    country   Countries @relation(fields: [countryId], references: [id])
+
+    stateId String
+    state   States @relation(fields: [stateId], references: [id])
+
+    cityId String?
+    city   Cities? @relation(fields: [cityId], references: [id])
+
+    countyId String?
+    county   County? @relation(fields: [countyId], references: [id])
+
+    createdById  String
+    createdBy    Users   @relation(fields: [createdById], references: [id], name: "vendorServicableAreaCreatedBy")
+    modifiedById String?
+    modifiedBy   Users?  @relation(fields: [modifiedById], references: [id], name: "vendorServicableAreaModifiedBy")
+
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    @@unique([vendorId, stateId, cityId])
+    @@unique([vendorId, stateId, countyId])
+    @@index([stateId, cityId])
+    @@index([stateId, countyId])
+    @@index([vendorId, stateId])
+    @@index([countryId, stateId])
+}
+
+enum BackgroundJobStatuses {
+    COMPLETED
+    ERROR
+    FAILED
+    PENDING_CONNEXUS
+    PENDING_FOR_APPROVAL
+    PENDING
+}
+
+enum JobTypes {
+    AI_CONTRACT_PROCESSING
+    ZIP_EXTRACTION_PROCESSING
+}
+
+model BackgroundJobs {
+    id       String                @id @default(uuid())
+    tenantId String
+    tenant   Tenants               @relation(fields: [tenantId], references: [id])
+    status   BackgroundJobStatuses @default(PENDING)
+    jobType  JobTypes
+    response String?
+    resultId String?
+    parentId String?
+
+    fileId     String?
+    fileDetail FileDetails? @relation(fields: [fileId], references: [id])
+
+    failureReason String?
+
+    createdAt  DateTime  @default(now())
+    modifiedAt DateTime  @updatedAt()
+    deletedAt  DateTime?
+
+    createdById  String?
+    createdBy    Users?  @relation(fields: [createdById], references: [id], name: "backgroundJobCreatedBy")
+    modifiedById String?
+    modifiedBy   Users?  @relation(fields: [modifiedById], references: [id], name: "backgroundJobModifiedBy")
+}
+
+model FileDetails {
+    id       String  @id @default(uuid())
+    filePath String?
+    fileHash String?
+    fileName String?
+
+    createdAt  DateTime  @default(now())
+    modifiedAt DateTime  @updatedAt()
+    deletedAt  DateTime?
+
+    BackgroundJobs BackgroundJobs[]
+
+    @@index([fileHash])
+}
+
+enum ContractTypes {
+    VENDOR
+    CLIENT
+    PROPERTY
+}
+
+enum EndTermTerminationTypes {
+    NONE
+    EARLY
+    REGULAR
+}
+
+enum ContractExecutionTypes {
+    A
+    B
+}
+
+enum ContractStatuses {
+    ACTIVE
+    IN_DRAFT
+    INACTIVE
+}
+
+model Contracts {
+    id                           String                  @id @default(uuid())
+    contractType                 ContractTypes           @default(VENDOR)
+    contractStartDate            DateTime?
+    contractEndDate              DateTime?
+    contractExecution            ContractExecutionTypes?
+    costPerUnit                  Float?
+    regularTerminationNotice     String?
+    annualContractValue          Float?                  @default(0)
+    contractTotalTerm            String?
+    endTermTermination           EndTermTerminationTypes @default(NONE)
+    earlyTerminationFee          Float?
+    earlyTerminationRequirements String?
+    noticeRequirements           String?
+    renewalTerms                 String?
+    deletedAt                    DateTime?
+    createdAt                    DateTime                @default(now())
+    modifiedAt                   DateTime                @updatedAt
+    createdById                  String?
+    modifiedById                 String?
+    contractStatus               ContractStatuses        @default(ACTIVE)
+
+    vendorId String?
+    vendor   Vendors? @relation(fields: [vendorId], references: [id])
+
+    notes String?
+
+    aiExtractedData   Json?
+    derivedVendorName String?
+    renewalDuration   String?
+
+    // Relations
+    createdBy  Users? @relation("contractCreatedBy", fields: [createdById], references: [id])
+    modifiedBy Users? @relation("contractModifiedBy", fields: [modifiedById], references: [id])
+
+    // Relation to other models
+    contractServices  PropertyContractServices[]
+    propertyContracts PropertyContracts[]
+
+    // RFP relations
+    rfps Rfps[]
+}
+
+model PropertyContractServices {
+    id                   String    @id @default(uuid())
+    contractId           String
+    serviceId            String?
+    propertyContractId   String
+    extractedServiceName String?
+    deletedAt            DateTime?
+    createdAt            DateTime  @default(now())
+    modifiedAt           DateTime  @updatedAt
+    createdById          String?
+    modifiedById         String?
+    baseServiceCost      Float?    @default(0)
+
+    // Relations
+    contract        Contracts         @relation(fields: [contractId], references: [id])
+    propertyContact PropertyContracts @relation(fields: [propertyContractId], references: [id])
+    service         Services?         @relation(fields: [serviceId], references: [id])
+    createdBy       Users?            @relation("contractServiceCreatedBy", fields: [createdById], references: [id])
+    modifiedBy      Users?            @relation("contractServiceModifiedBy", fields: [modifiedById], references: [id])
+}
+
+model PropertyContracts {
+    id                       String                     @id @default(uuid())
+    propertyId               String?
+    contractId               String
+    extractedPropertyName    String?
+    deletedAt                DateTime?
+    createdAt                DateTime                   @default(now())
+    modifiedAt               DateTime                   @updatedAt
+    createdById              String?
+    modifiedById             String?
+    costPerUnit              Float?                     @default(0)
+    // Relations
+    property                 ClientProperties?          @relation(fields: [propertyId], references: [id])
+    contract                 Contracts                  @relation(fields: [contractId], references: [id])
+    createdBy                Users?                     @relation("propertyContractCreatedBy", fields: [createdById], references: [id])
+    modifiedBy               Users?                     @relation("propertyContractModifiedBy", fields: [modifiedById], references: [id])
+    PropertyContractServices PropertyContractServices[]
+}
+
+model ApprovedClientVendors {
+    clientId   String
+    vendorId   String
+    createdAt  DateTime @default(now())
+    modifiedAt DateTime @updatedAt()
+
+    client Client  @relation(fields: [clientId], references: [id])
+    vendor Vendors @relation(fields: [vendorId], references: [id])
+
+    @@id([clientId, vendorId])
+}
+
+model ClientNotApprovedVendor {
+    vendorId     String
+    clientId     String
+    isDeleted    Boolean  @default(false)
+    createdAt    DateTime @default(now())
+    modifiedAt   DateTime @updatedAt
+    createdById  String?
+    modifiedById String?
+    tenantId     String
+
+    // Relations
+    vendor     Vendors @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+    client     Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    createdBy  Users?  @relation("ClientNotApprovedVendorCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    modifiedBy Users?  @relation("ClientNotApprovedVendorModifiedBy", fields: [modifiedById], references: [id], onDelete: Restrict)
+
+    @@id([clientId, vendorId])
+}
+
+enum ScopeOfWorkTypes {
+    BASE_SCOPE_LIBRARY
+    CLIENT_SCOPE_LIBRARY
+    CLIENT_SCOPE_OF_WORK
+}
+
+enum ScopeOfWorkStatuses {
+    ACTIVE
+    DRAFT
+    FAILED
+    INACTIVE
+    PROCESSING
+    REJECTED
+}
+
+enum SowThemeTypes {
+    DEFAULT
+    CLIENT_THEME
+}
+
+model ScopeOfWork {
+    id                  String                @id @default(uuid())
+    scopeName           String                @db.VarChar(250)
+    description         String?               @db.Text
+    scopeType           ScopeOfWorkTypes      @default(BASE_SCOPE_LIBRARY)
+    scopeOfWorkStatus   ScopeOfWorkStatuses   @default(PROCESSING)
+    serviceId           String?
+    clientId            String?
+    createdAt           DateTime              @default(now())
+    updatedAt           DateTime?             @updatedAt
+    deletedAt           DateTime?
+    createdById         String?
+    modifiedById        String?
+    sourceId            String?
+    source              ScopeOfWork?          @relation("ScopeOfWorkSource", fields: [sourceId], references: [id], onDelete: Restrict)
+    derived             ScopeOfWork[]         @relation("ScopeOfWorkSource")
+    themeType           SowThemeTypes         @default(DEFAULT)
+    // Relations
+    service             Services?             @relation(fields: [serviceId], references: [id])
+    client              Client?               @relation(fields: [clientId], references: [id])
+    createdBy           Users?                @relation("scopeOfWorkCreatedBy", fields: [createdById], references: [id])
+    modifiedBy          Users?                @relation("scopeOfWorkModifiedBy", fields: [modifiedById], references: [id])
+    scopeOfWorkProperty ScopeOfWorkProperty[]
+    scopeOfWorkVersion  ScopeOfWorkVersion[]
+
+    // RFP relations
+    rfpScopeOfWork          RfpScopeOfWork[]
+    RfpPropertyAttachments  RfpPropertyAttachments[]
+    RfpProperties           RfpProperties[]
+    templateGenerationTasks TemplateGenerationTasks[]
+}
+
+enum TemplateGenerationStatuses {
+    COMPLETED
+    FAILED
+    PENDING
+}
+
+enum TemplateGenerationTypes {
+    RFP
+    SOW
+}
+
+enum TemplateFileTypes {
+    DOCX
+    PDF
+}
+
+model TemplateGenerationTasks {
+    id            String                     @id @default(uuid())
+    scopeOfWorkId String?
+    scopeOfWork   ScopeOfWork?               @relation(fields: [scopeOfWorkId], references: [id], onDelete: Cascade)
+    createdAt     DateTime                   @default(now())
+    rfpId         String?
+    rfp           Rfps?                      @relation(fields: [rfpId], references: [id], onDelete: Restrict)
+    completedAt   DateTime?
+    updatedAt     DateTime                   @updatedAt()
+    status        TemplateGenerationStatuses @default(PENDING)
+    type          TemplateGenerationTypes    @default(SOW)
+    fileType      TemplateFileTypes          @default(DOCX)
+    fileUrl       String?
+    // Relations
+    createdBy     Users?                     @relation("templateGenerationTaskCreatedBy", fields: [createdById], references: [id])
+    createdById   String?
+    updatedBy     Users?                     @relation("templateGenerationTaskUpdatedBy", fields: [updatedById], references: [id])
+    updatedById   String?
+}
+
+model ScopeOfWorkProperty {
+    id                         String                       @id @default(uuid())
+    scopeOfWorkId              String
+    propertyId                 String
+    createdAt                  DateTime                     @default(now())
+    scopeOfWork                ScopeOfWork                  @relation(fields: [scopeOfWorkId], references: [id], onDelete: Cascade)
+    property                   ClientProperties             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+    scopeOfWorkPropertyVersion ScopeOfWorkPropertyVersion[]
+
+    @@unique([scopeOfWorkId, propertyId], name: "uniqueScopeProperty")
+}
+
+enum ScopeOfWorkVersionStatuses {
+    COMPLETED
+    FAILED
+    PROCESSING
+    SAVING
+}
+
+model ScopeOfWorkVersion {
+    id               String                     @id @default(uuid())
+    scopeOfWorkId    String
+    versionNumber    Int
+    fileName         String
+    sourceFileUrl    String
+    content          String?
+    parentVersionId  String?
+    isCurrent        Boolean                    @default(false)
+    createdAt        DateTime                   @default(now())
+    updatedAt        DateTime?
+    isDeleted        Boolean                    @default(false)
+    status           ScopeOfWorkVersionStatuses @default(PROCESSING)
+    statusModifiedAt DateTime?
+    scopeOfWork      ScopeOfWork                @relation(fields: [scopeOfWorkId], references: [id], onDelete: Cascade)
+    parentVersion    ScopeOfWorkVersion?        @relation("ParentVersion", fields: [parentVersionId], references: [id], onDelete: Restrict)
+    childVersions    ScopeOfWorkVersion[]       @relation("ParentVersion")
+
+    // Uploaded file details
+    uploadedBy   Users?    @relation(fields: [uploadedById], references: [id], name: "scopeOfWorkVersionUploadedBy")
+    uploadedById String?
+    uploadedAt   DateTime?
+
+    createdById                String?
+    createdBy                  Users?                       @relation("scopeOfWorkVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    modifiedById               String?
+    modifiedBy                 Users?                       @relation("scopeOfWorkVersionModifiedBy", fields: [modifiedById], references: [id], onDelete: Restrict)
+    scopeOfWorkPropertyVersion ScopeOfWorkPropertyVersion[]
+
+    // @@unique([scopeOfWorkId, isCurrent], name: "uniqueCurrentVersion", map: "unique_current_version")
+}
+
+model ScopeOfWorkPropertyVersion {
+    id                    String    @id @default(uuid())
+    scopeOfWorkPropertyId String
+    scopeOfWorkVersionId  String
+    isCurrent             Boolean   @default(false)
+    createdAt             DateTime  @default(now())
+    modifiedAt            DateTime? @updatedAt()
+
+    scopeOfWorkProperty ScopeOfWorkProperty @relation(fields: [scopeOfWorkPropertyId], references: [id], onDelete: Cascade)
+    scopeOfWorkVersion  ScopeOfWorkVersion  @relation(fields: [scopeOfWorkVersionId], references: [id], onDelete: Cascade)
+
+    @@unique([scopeOfWorkPropertyId, scopeOfWorkVersionId], name: "uniquePropertyVersion")
+}
+
+enum RfpPortfolioType {
+    MULTI_PROPERTY
+    SINGLE_PROPERTY
+}
+
+enum RfpSendStatusTypes {
+    DELIVERED
+    FAILED
+    OPENED
+    SENT
+}
+
+enum RfpStatusType {
+    ACTIVE
+    AWARD_PENDING
+    AWARDED
+    CANCELLED
+    CLOSED
+    CLOSED_FOR_BIDS
+    DEACTIVE
+    DRAFT
+    IN_BID_REVIEW
+    OPEN_FOR_BIDS
+}
+
+model Rfps {
+    id                 String           @id @default(uuid())
+    rfpName            String           @db.VarChar(255)
+    description        String?          @db.Text
+    client             Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    clientId           String
+    serviceId          String
+    service            Services         @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+    status             RfpStatusType    @default(DRAFT)
+    portfolioType      RfpPortfolioType @default(SINGLE_PROPERTY)
+    contract           Contracts?       @relation(fields: [contractId], references: [id])
+    contractId         String?
+    rfpDueDate         DateTime?        @db.Date
+    rfpExtendedDueDate DateTime?        @db.Date
+    rfpAwardDate       DateTime?        @db.Date
+    rfqDate            DateTime?        @db.Date
+    rfiDate            DateTime?        @db.Date
+    contractStartDate  DateTime?        @db.Date
+    termOfContract     String?
+    themeType          SowThemeTypes    @default(DEFAULT)
+    // Version control fields
+    versionNumber      Int              @default(1)
+    parentVersion      Rfps?            @relation("RfpVersions", fields: [parentVersionId], references: [id], onDelete: Restrict)
+    parentVersionId    String?
+    childVersions      Rfps[]           @relation("RfpVersions")
+    isCurrent          Boolean          @default(true)
+
+    // Timestamps and user references
+    createdAt   DateTime  @default(now())
+    modifiedAt  DateTime  @default(now()) @updatedAt
+    createdBy   Users?    @relation("rfpCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?    @relation("rfpUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    deletedAt   DateTime?
+
+    // Relations
+    rfpProperties           RfpProperties[]
+    rfpDocuments            RfpDocuments[]
+    rfpScopeOfWork          RfpScopeOfWork[]
+    rfpSendLog              RfpSendLog[]
+    RfpPropertyAttachments  RfpPropertyAttachments[]
+    TemplateGenerationTasks TemplateGenerationTasks[]
+}
+
+model RfpProperties {
+    id               String           @id @default(uuid())
+    rfp              Rfps             @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+    rfpId            String
+    clientProperty   ClientProperties @relation(fields: [clientPropertyId], references: [id], onDelete: Cascade)
+    clientPropertyId String
+
+    scopeOfWorkId String?
+    scopeOfWork   ScopeOfWork? @relation(fields: [scopeOfWorkId], references: [id], onDelete: Restrict)
+
+    // Timestamps and user references
+    createdAt   DateTime  @default(now())
+    modifiedAt  DateTime  @default(now()) @updatedAt
+    createdBy   Users?    @relation("rfpPropertyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?    @relation("rfpPropertyUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    deletedAt   DateTime?
+
+    @@unique([rfpId, clientPropertyId, deletedAt], name: "unique_rfp_property")
+}
+
+model RfpPropertyAttachments {
+    id            String            @id @default(uuid())
+    scopeOfWorkId String?
+    rfpId         String?
+    rfp           Rfps?             @relation(fields: [rfpId], references: [id], onDelete: Restrict)
+    scopeOfWork   ScopeOfWork?      @relation(fields: [scopeOfWorkId], references: [id], onDelete: Restrict)
+    propertyId    String?
+    property      ClientProperties? @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+    fileName      String            @db.VarChar(255)
+    filePath      String            @db.Text
+    fileType      String?           @db.VarChar(100)
+    fileSizeBytes BigInt?
+    fileHash      String?
+    uploadedAt    DateTime          @default(now())
+
+    // Timestamps and user references
+    createdAt   DateTime  @default(now())
+    modifiedAt  DateTime  @default(now()) @updatedAt
+    createdBy   Users?    @relation("rfpPropertyAttachmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?    @relation("rfpPropertyAttachmentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    deletedAt   DateTime?
+}
+
+model RfpDocuments {
+    id            String   @id @default(uuid())
+    rfp           Rfps     @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+    rfpId         String
+    fileName      String   @db.VarChar(255)
+    filePath      String   @db.Text
+    fileType      String?  @db.VarChar(100)
+    fileSizeBytes BigInt?
+    fileHash      String?
+    uploadedAt    DateTime @default(now())
+
+    // Timestamps and user references
+    createdAt   DateTime  @default(now())
+    modifiedAt  DateTime  @default(now()) @updatedAt
+    createdBy   Users?    @relation("rfpDocumentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?    @relation("rfpDocumentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    deletedAt   DateTime?
+}
+
+model RfpScopeOfWork {
+    id            String      @id @default(uuid())
+    rfp           Rfps        @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+    rfpId         String
+    scopeOfWork   ScopeOfWork @relation(fields: [scopeOfWorkId], references: [id], onDelete: Cascade)
+    scopeOfWorkId String
+    isPrimary     Boolean     @default(false)
+
+    // Timestamps and user references
+    createdAt   DateTime  @default(now())
+    modifiedAt  DateTime  @default(now()) @updatedAt
+    createdBy   Users?    @relation("rfpScopeOfWorkCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?    @relation("rfpScopeOfWorkUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    deletedAt   DateTime?
+
+    @@unique([rfpId, scopeOfWorkId, deletedAt], name: "unique_rfp_scope_of_work")
+}
+
+model RfpSendLog {
+    id       String   @id @default(uuid())
+    rfp      Rfps     @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+    rfpId    String
+    sendDate DateTime @default(now())
+
+    // Timestamps and user references
+    createdAt   DateTime @default(now())
+    createdBy   Users?   @relation("rfpSendLogCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?   @relation("rfpSendLogUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+    modifiedAt  DateTime @default(now()) @updatedAt
+
+    // Relations
+    rfpSendRecipients RfpSendRecipients[]
+}
+
+model RfpSendRecipients {
+    id             String             @id @default(uuid())
+    rfpSendLog     RfpSendLog         @relation(fields: [rfpSendLogId], references: [id], onDelete: Cascade)
+    rfpSendLogId   String
+    vendor         Vendors            @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+    vendorId       String
+    recipientEmail String             @db.VarChar(255)
+    sendStatus     RfpSendStatusTypes @default(SENT)
+    sentAt         DateTime           @default(now())
+    deliveredAt    DateTime?
+    openedAt       DateTime?
+    failureReason  String?            @db.Text
+
+    // Timestamps and user references
+    createdAt   DateTime @default(now())
+    modifiedAt  DateTime @default(now()) @updatedAt
+    createdBy   Users?   @relation("rfpSendRecipientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?   @relation("rfpSendRecipientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+
+    @@unique([rfpSendLogId, vendorId])
+}
+
+enum ExportBackgroundJobStatus {
+    COMPLETED
+    FAILED
+    PENDING
+}
+
+enum ExportFileTypes {
+    CSV
+    XLSX
+    PDF
+}
+
+model ExportBackgroundJobs {
+    id          String                    @id @default(uuid())
+    type        String
+    status      ExportBackgroundJobStatus @default(PENDING)
+    filePath    String?
+    fileType    ExportFileTypes
+    createdAt   DateTime                  @default(now())
+    updatedAt   DateTime                  @updatedAt()
+    createdBy   Users?                    @relation("exportBackgroundJobCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+    createdById String?
+    updatedBy   Users?                    @relation("exportBackgroundJobUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+    updatedById String?
+}
+
+model DocumentGroup {
+    id                  Int       @id @default(autoincrement())
+    group_name          String    @unique @map("group_name")
+    description         String?
+    first_page_content  String    @map("first_page_content")
+    first_page_markdown String?   @map("first_page_markdown")
+    embedding_vector_id String?   @map("embedding_vector_id") @db.VarChar(100)
+    embedding_model     String    @default("gemini-embedding-001") @map("embedding_model") @db.VarChar(100)
+    embedding_dimension Int       @default(1536) @map("embedding_dimension")
+    document_type       String?   @map("document_type") @db.VarChar(100)
+    document_category   String?   @map("document_category") @db.VarChar(100)
+    document_count      Int       @default(1) @map("document_count")
+    last_matched_at     DateTime? @map("last_matched_at") @db.Timestamp(6)
+    created_at          DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+    updated_at          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+    promptTemplates  GroupPromptTemplate[]
+    matchedDocuments MatchedDocument[]
+
+    @@map("document_groups")
+}
+
+model GroupPromptTemplate {
+    id               Int       @id @default(autoincrement())
+    group_id         Int       @map("group_id")
+    prompt_name      String    @map("prompt_name")
+    prompt_template  String    @map("prompt_template")
+    prompt_variables Json?     @map("prompt_variables") @db.JsonB
+    is_active        Boolean   @default(true) @map("is_active")
+    version          Int       @default(1)
+    usage_count      Int       @default(0) @map("usage_count")
+    last_used_at     DateTime? @map("last_used_at") @db.Timestamp(6)
+    created_at       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+    group DocumentGroup @relation(fields: [group_id], references: [id])
+
+    @@map("group_prompt_templates")
+}
+
+model MatchedDocument {
+    id                 Int      @id @default(autoincrement())
+    group_id           Int      @map("group_id")
+    file_path          String   @map("file_path") @db.VarChar(500)
+    file_name          String   @map("file_name") @db.VarChar(255)
+    file_hash          String?  @map("file_hash") @db.VarChar(64)
+    similarity_score   Float    @map("similarity_score") @db.DoublePrecision
+    matched_at         DateTime @default(now()) @map("matched_at") @db.Timestamp(6)
+    processing_time    Float?   @map("processing_time") @db.DoublePrecision
+    first_page_preview String?  @map("first_page_preview")
+
+    group DocumentGroup @relation(fields: [group_id], references: [id])
+
+    @@map("matched_documents")
+}
+
+enum GeoScope {
+    CITY
+    COUNTY
+    STATE
+}
+
+model ServiceUnitCoverage {
+    id        String   @id @default(uuid())
+    tenant    Tenants  @relation(fields: [tenantId], references: [id])
+    tenantId  String
+    service   Services @relation(fields: [serviceId], references: [id])
+    serviceId String
+
+    geoScope GeoScope
+    geoId    String // references cityId OR countyId OR stateId
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}

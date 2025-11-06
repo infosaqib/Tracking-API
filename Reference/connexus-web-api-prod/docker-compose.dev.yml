@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  connexus-be:
+    image: connexus-be-dev
+    build:
+      context: .
+      dockerfile: ./apps/connexus-be/Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - 3000:3000
+      - 5555:5555
+    volumes:
+      - ./apps/connexus-be:/usr/src/app/apps/connexus-be
+      - ./libs:/usr/src/app/libs
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    command: yarn start:dev connexus-be
+    networks:
+      - connexus-app-net
+    depends_on:
+      - database
+
+  sow-rfq:
+    image: sow-rfq-dev
+    build:
+      context: .
+      dockerfile: ./apps/sow-rfq/Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+    ports:
+      - 3001:3001
+      - 5556:5555 # Mapping to a different host port to avoid conflict
+    volumes:
+      - ./apps/sow-rfq:/usr/src/app/apps/sow-rfq
+      - ./libs:/usr/src/app/libs
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    command: yarn start:dev sow-rfq
+    networks:
+      - connexus-app-net
+    depends_on:
+      - database
+
+  database:
+    container_name: connexus_postgress_db
+    image: postgres:16.3
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: db
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks:
+      - connexus-app-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: connexus_pgadmin
+    depends_on:
+      - database
+    ports:
+      - '5050:80' # Changed port to avoid conflict with Prisma Studio
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@connexus.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      POSTGRES_PORT: 5432
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    restart: unless-stopped
+    networks:
+      - connexus-app-net
+
+networks:
+  connexus-app-net:
+    driver: bridge
+
+volumes:
+  db:
+    driver: local
+    name: connexus_dev_db
+  node_modules:
+    driver: local
+    name: connexus_node_modules
+  dist:
+    driver: local
+    name: connexus_dev_dist
+  pgadmin-data:
+    driver: local
+    name: connexus_pgadmin_data

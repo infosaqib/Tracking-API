@@ -1,0 +1,382 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table Tenants {
+  id String [pk]
+  name String [not null]
+  type TenantTypes [not null]
+  client Client
+  clientId String
+  vendor Vendors
+  vendorId String
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creatorId String
+  creator Users
+  updater Users
+  updaterId String
+  Users Users [not null]
+  Roles Roles [not null]
+}
+
+Table Users {
+  id String [pk]
+  tenant Tenants
+  tenantsId String
+  email String [not null]
+  isInternal Boolean [not null]
+  title String
+  authorized Boolean [not null, default: false]
+  status UserStatus
+  lastInviteId String
+  lastInviteSendTime DateTime
+  firstName String [not null]
+  lastName String [not null]
+  fullName String [not null, default: '']
+  phoneCode String
+  phoneNumber String
+  avatarUrl String
+  contactType ContactType
+  cognitoId String [unique]
+  creatorId String
+  creator Users
+  createdUsers Users [not null]
+  updaterId String
+  updater Users
+  updatedUsers Users [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  deletedAt DateTime
+  client Client [not null]
+  updatedClients Client [not null]
+  clientProperties ClientProperties [not null]
+  updatedClientProperties ClientProperties [not null]
+  createdPropertyContacts PropertyContacts [not null]
+  updatedPropertyContacts PropertyContacts [not null]
+  createduserRoles UserRoles [not null]
+  updatedUserRoles UserRoles [not null]
+  userRoles UserRoles [not null]
+  roles Roles [not null]
+  updatedRoles Roles [not null]
+  updatedTenants Tenants [not null]
+  createdTenants Tenants [not null]
+  updatedVendoes Vendors [not null]
+  vendoes Vendors [not null]
+  permissions Permissions [not null]
+  updatedPermissions Permissions [not null]
+  rolePermissions RolePermissions [not null]
+  updatedRolePermissions RolePermissions [not null]
+}
+
+Table Roles {
+  id String [pk]
+  tenant Tenants
+  name String [not null]
+  readOnly Boolean [not null, default: false]
+  roleLevel Int [not null, default: 2]
+  deletedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users
+  creatorId String
+  updater Users
+  updaterId String
+  tenantsId String
+  rolePermissions RolePermissions [not null]
+  userRoles UserRoles [not null]
+
+  indexes {
+    (name, tenantsId) [unique]
+  }
+}
+
+Table UserRoles {
+  user Users [not null]
+  userId String [not null]
+  role Roles [not null]
+  roleId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users
+  creatorId String
+  updater Users
+  updaterId String
+
+  indexes {
+    (userId, roleId) [pk]
+  }
+}
+
+Table Permissions {
+  id String [pk]
+  module PermissionModules [not null]
+  permissionModulesId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users [not null]
+  creatorId String [not null]
+  updater Users [not null]
+  updaterId String [not null]
+}
+
+Table RolePermissions {
+  role Roles [not null]
+  rolesId String [not null]
+  permissionsId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users
+  creatorId String
+  updater Users
+  updaterId String
+
+  indexes {
+    (rolesId, permissionsId) [unique]
+  }
+}
+
+Table Client {
+  id String [pk]
+  parentCompany Client
+  parentCompanyId String
+  childCompanies Client [not null]
+  name String [not null]
+  type ClientTypes [not null]
+  logoUrl String [not null]
+  legalName String [not null]
+  description String
+  onlyApprovedVendors Boolean
+  website String
+  status ClientStatus [not null]
+  deletedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users
+  creatorId String
+  updater Users
+  updaterId String
+  tenants Tenants [not null]
+  clientProperties ClientProperties [not null]
+}
+
+Table ClientProperties {
+  id String [pk]
+  client Client [not null]
+  clientId String [not null]
+  name String [not null]
+  address String [not null]
+  state States [not null]
+  country Countries [not null]
+  unitCount Int [not null]
+  buildingCount Int [not null]
+  type PropertyBuildingTypes [not null]
+  floorCount Int [not null]
+  note String
+  locationCordinates String
+  isRetail Boolean [not null]
+  isRetailScope Boolean [not null]
+  status PropertyStatuses [not null, default: 'ACTIVE']
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users [not null]
+  creatorId String [not null]
+  updater Users [not null]
+  updaterId String [not null]
+  stateId String [not null]
+  countryId String [not null]
+}
+
+Table PropertyContacts {
+  id String [pk]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users [not null]
+  creatorId String [not null]
+  updater Users [not null]
+  updaterId String [not null]
+}
+
+Table Vendors {
+  id String [pk]
+  name String [not null]
+  logo String [not null]
+  stage VendorStages [not null, default: 'APPLYING']
+  address String [not null]
+  recognition String [not null]
+  certInsurance String [not null]
+  note String
+  parentCompany Vendors
+  parentCompanyId String
+  childCompanies Vendors [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  creator Users
+  creatorId String
+  updater Users
+  updaterId String
+  Tenants Tenants [not null]
+}
+
+Table PermissionModules {
+  id String [pk]
+  name String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  Permissions Permissions [not null]
+}
+
+Table Countries {
+  id String [pk]
+  countryName String [unique, not null]
+  isDeleted Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  states States [not null]
+  ClientProperties ClientProperties [not null]
+}
+
+Table States {
+  id String [pk]
+  stateName String [not null]
+  countryId String [not null]
+  country Countries [not null]
+  isDeleted Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  modifiedAt DateTime [not null]
+  ClientProperties ClientProperties [not null]
+
+  indexes {
+    (stateName, countryId) [unique]
+  }
+}
+
+Enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+Enum TenantTypes {
+  CLIENT
+  VENDOR
+}
+
+Enum PermissionTypes {
+  CLIENT_PERMISSION
+  VENDOR_PERMISSION
+  STAFF_PERMISSION
+}
+
+Enum ClientTypes {
+  MULTI_FAMILY
+  HOA
+}
+
+Enum ClientContactStatus {
+  AVAILABLE
+  NOT_AVAILABLE
+  NOT_REACHABLE
+}
+
+Enum PropertyBuildingTypes {
+  A
+  B
+  C
+}
+
+Enum PropertyStatuses {
+  ACTIVE
+  INACTIVE
+}
+
+Enum VendorStages {
+  ONBOARDING
+  CNX_APPROVED
+  CNX_NOT_APPROVED
+  CHANGING_INFO
+  APPLYING
+  IN_ACTIVE
+}
+
+Enum ContactType {
+  PRIMARY_CONTACT
+  SECONDARY_CONTACT
+  ON_SITE_TEAM_USER
+}
+
+Enum ClientStatus {
+  MULTI_FAMILY
+  HOA
+  COMMERCIAL
+  RETAIL
+  HOTEL
+}
+
+Ref: Tenants.clientId > Client.id
+
+Ref: Tenants.vendorId > Vendors.id
+
+Ref: Tenants.creatorId - Users.id
+
+Ref: Tenants.updaterId - Users.id
+
+Ref: Users.tenantsId - Tenants.id
+
+Ref: Users.creatorId - Users.id
+
+Ref: Users.updaterId - Users.id
+
+Ref: Roles.tenantsId > Tenants.id
+
+Ref: Roles.creatorId > Users.id
+
+Ref: Roles.updaterId > Users.id
+
+Ref: UserRoles.userId > Users.id
+
+Ref: UserRoles.roleId > Roles.id
+
+Ref: UserRoles.creatorId > Users.id
+
+Ref: UserRoles.updaterId > Users.id
+
+Ref: Permissions.permissionModulesId > PermissionModules.id
+
+Ref: Permissions.creatorId > Users.id
+
+Ref: Permissions.updaterId > Users.id
+
+Ref: RolePermissions.rolesId > Roles.id
+
+Ref: RolePermissions.creatorId > Users.id
+
+Ref: RolePermissions.updaterId > Users.id
+
+Ref: Client.parentCompanyId - Client.id
+
+Ref: Client.creatorId > Users.id
+
+Ref: Client.updaterId > Users.id
+
+Ref: ClientProperties.clientId > Client.id
+
+Ref: ClientProperties.stateId > States.id
+
+Ref: ClientProperties.countryId > Countries.id
+
+Ref: ClientProperties.creatorId > Users.id
+
+Ref: ClientProperties.updaterId > Users.id
+
+Ref: PropertyContacts.creatorId > Users.id
+
+Ref: PropertyContacts.updaterId > Users.id
+
+Ref: Vendors.parentCompanyId - Vendors.id
+
+Ref: Vendors.creatorId > Users.id
+
+Ref: Vendors.updaterId > Users.id
+
+Ref: States.countryId > Countries.id

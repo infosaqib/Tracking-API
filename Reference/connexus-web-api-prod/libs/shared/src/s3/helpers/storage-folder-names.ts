@@ -1,0 +1,18 @@
+export const storageFolderNames = {
+  clients: 'clients',
+  vendors: 'vendors',
+  public: 'public',
+  private: 'private',
+  logo: 'logo',
+  w9: 'w9',
+  certificateOfInsurance: 'certificate-of-insurance',
+  aiContractDocument: 'ai-contract-document',
+  aiContractsZip: 'ai-contracts-zip',
+  scopeOfWork: 'scope-of-work',
+  rfp: 'rfp',
+  rfpPropertyAttachment: 'rfp-property-attachment',
+  rfpAttachment: 'rfp-attachment',
+  headerImage: 'header-image',
+  sowTemplate: 'sow-template',
+  rfpTemplate: 'rfp-template',
+};

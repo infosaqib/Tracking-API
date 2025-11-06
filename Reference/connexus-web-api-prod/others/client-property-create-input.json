@@ -1,0 +1,52 @@
+{
+  "clientId": "27cf7c92-9b50-49a4-9b90-9448485833cb",
+  "name": "Acme Corporation33",
+  "legalName": "Acme Corp33",
+  "managerFirstName": "John",
+  "managerLastName": "Doe33",
+  "managerEmail": "john.doe33@example.com",
+  "managerPhoneCode": "+1",
+  "managerPhone": "173-456-78933",
+  "type": "GARDEN_STYLE",
+  "isRetail": true,
+  "isRetailScope": false,
+  "website": "https://www.acme.com",
+  "status": "ACTIVE",
+  "address": "173 Main St33",
+  "zip": "17345",
+  "unitCount": 50,
+  "buildingCount": 5,
+  "floorCount": 10,
+  "acres": 2.5,
+  "note": "This is a sample property33.",
+  "latitude": 40.717776,
+  "longitude": -74.005974,
+  "countryId": "6e451f70-fd3b-408d-af8c-ab2bae7576f1",
+  "stateId": "095bbbcc-5c64-4a04-bd85-bf4e7fa1df2e",
+  "cityId": "778b601d-5a47-4388-97e0-b06c3927d897",
+  "countyId": "86db8121-6392-4605-a500-ef42ca7ff271",
+  "users": [
+    {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@33example.com",
+      "title": "Property Manager",
+      "phoneCode": "+1",
+      "phoneNumber": "98765432933"
+    },
+    {
+      "firstName": "Mike",
+      "lastName": "Johnson",
+      "email": "mike.johnson@33example.com",
+      "title": "Assistant Manager",
+      "phoneCode": "+1",
+      "phoneNumber": "55517345633"
+    }
+  ],
+  "services": [
+    {
+      "serviceId": "6512bd43-d9ca-46ad-a7b8-9e7b4e8d7f0b",
+      "subServices": ["c20ad4d76fe97759aa27a0c99bff6710"]
+    }
+  ]
+}

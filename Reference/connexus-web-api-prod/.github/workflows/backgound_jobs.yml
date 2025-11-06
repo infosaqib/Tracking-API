@@ -1,0 +1,347 @@
+name: Deploy backgroundjobs
+
+on:
+  push:
+    branches:
+      - dev
+      - test
+      - stage
+      - prod
+
+jobs:
+  deploy-background-dev:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: blacksmith
+    env:
+      AWS_REGION: us-east-1
+      REPO_URI: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/connexus-api
+      NODE_ENV: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Notify Google Chat - Starting Dev Deployment
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚀 Starting deployment of SOW-RFQ API to Dev.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push background API
+        run: |
+          IMAGE_TAG=backgroundjobdev-${{ github.sha }}
+          docker build --build-arg NODE_ENV=$NODE_ENV -f apps/background-jobs/Dockerfile -t $REPO_URI:$IMAGE_TAG .
+          docker push $REPO_URI:$IMAGE_TAG
+
+      - name: Install SSH Client
+        run: sudo apt-get install -y sshpass
+
+      - name: Deploy SOW-RFQ API on EC2
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY_NON_PROD }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER_NON_PROD }}@${{ secrets.EC2_HOST_NON_PROD }} << EOF
+            IMAGE_TAG=backgroundjobdev-${{ github.sha }}
+            CONTAINER_NAME=background-app-dev
+            docker stop \$CONTAINER_NAME || true
+            docker rm \$CONTAINER_NAME || true
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPO_URI
+            docker pull $REPO_URI:\$IMAGE_TAG
+            docker run -d --name \$CONTAINER_NAME \
+              --env NODE_ENV=development \
+              --env DATABASE_URL="${{ secrets.AWS_LOCAL_DEV_DB_SECRET }}" \
+              --env SHADOW_DATABASE_URL="${{ secrets.AWS_LOCAL_DEV_SHADOW_DB_SECRET }}" \
+              --env AWS_REGION="${{ secrets.DEV_COGNITO_REGION }}" \
+              --env AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              --env AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              --env S3_BUCKET_NAME="${{ secrets.DEV_S3_BUCKET_NAME }}" \
+              --env STORAGE_CDN_URL="${{ secrets.DEV_STORAGE_CDN_URL }}" \
+              --env EXPORT_QUEUE_URL="${{ vars.EXPORT_QUEUE_URL_DEV }}" \
+              $REPO_URI:\$IMAGE_TAG
+            sudo docker image prune -f
+            sudo docker system prune --all --volumes --force
+          EOF
+          rm private_key.pem
+
+      - name: Notify Google Chat - Dev Success
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"✅ Connexus & SOW-RFQ deployed to Dev.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Notify Google Chat on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❗ Deployment failed for job: ${{ github.job }}.\n\nSee logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+  deploy-background-test:
+    if: github.ref == 'refs/heads/test'
+    runs-on: blacksmith
+    env:
+      AWS_REGION: us-east-1
+      REPO_URI: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/connexus-api
+      NODE_ENV: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Notify Google Chat - Starting Test Deployment
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚀 Starting deployment of backgroundjobs to Test.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push background API
+        run: |
+          IMAGE_TAG=backgroundjobtest-${{ github.sha }}
+          docker build --build-arg NODE_ENV=$NODE_ENV -f apps/background-jobs/Dockerfile -t $REPO_URI:$IMAGE_TAG .
+          docker push $REPO_URI:$IMAGE_TAG
+
+      - name: Install SSH Client
+        run: sudo apt-get install -y sshpass
+
+      - name: Deploy backgroundjobs on EC2
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY_NON_PROD }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER_NON_PROD }}@${{ secrets.EC2_HOST_NON_PROD }} << EOF
+            IMAGE_TAG=backgroundjobtest-${{ github.sha }}
+            CONTAINER_NAME=background-app-test
+            docker stop \$CONTAINER_NAME || true
+            docker rm \$CONTAINER_NAME || true
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPO_URI
+            docker pull $REPO_URI:\$IMAGE_TAG
+            docker run -d --name \$CONTAINER_NAME \
+              --env NODE_ENV=development \
+              --env DATABASE_URL="${{ secrets.AWS_LOCAL_TEST_DB_SECRET }}" \
+              --env SHADOW_DATABASE_URL="${{ secrets.AWS_LOCAL_TEST_SHADOW_DB_SECRET }}" \
+              --env AWS_REGION="${{ secrets.TEST_COGNITO_REGION }}" \
+              --env AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              --env AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              --env S3_BUCKET_NAME="${{ secrets.TEST_S3_BUCKET_NAME }}" \
+              --env STORAGE_CDN_URL="${{ secrets.TEST_STORAGE_CDN_URL }}" \
+              --env EXPORT_QUEUE_URL="${{ vars.EXPORT_QUEUE_URL_TEST }}" \
+              $REPO_URI:\$IMAGE_TAG
+            sudo docker image prune -f
+            sudo docker system prune --all --volumes --force
+          EOF
+          rm private_key.pem
+
+      - name: Notify Google Chat - Test Success
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"✅ Connexus & SOW-RFQ deployed to Test.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Notify Google Chat on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❗ Deployment failed for job: ${{ github.job }}.\n\nSee logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+  deploy-background-stage:
+    if: github.ref == 'refs/heads/stage'
+    runs-on: blacksmith
+    env:
+      AWS_REGION: us-east-1
+      REPO_URI: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/connexus-api
+      NODE_ENV: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Notify Google Chat - Starting Stage Deployment
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚀 Starting deployment of backgroundjobs to Stage.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push background API
+        run: |
+          IMAGE_TAG=backgroundjobstage-${{ github.sha }}
+          docker build --build-arg NODE_ENV=$NODE_ENV -f apps/background-jobs/Dockerfile -t $REPO_URI:$IMAGE_TAG .
+          docker push $REPO_URI:$IMAGE_TAG
+
+      - name: Install SSH Client
+        run: sudo apt-get install -y sshpass
+
+      - name: Deploy backgroundjobs on EC2
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY_NON_PROD }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER_NON_PROD }}@${{ secrets.EC2_HOST_NON_PROD }} << EOF
+            IMAGE_TAG=backgroundjobstage-${{ github.sha }}
+            CONTAINER_NAME=background-app-stage
+            docker stop \$CONTAINER_NAME || true
+            docker rm \$CONTAINER_NAME || true
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPO_URI
+            docker pull $REPO_URI:\$IMAGE_TAG
+            docker run -d --name \$CONTAINER_NAME \
+              --env NODE_ENV=development \
+              --env DATABASE_URL="${{ secrets.AWS_LOCAL_STAGE_DB_SECRET }}" \
+              --env SHADOW_DATABASE_URL="${{ secrets.AWS_LOCAL_STAGE_SHADOW_DB_SECRET }}" \
+              --env AWS_REGION="${{ secrets.STAGE_COGNITO_REGION }}" \
+              --env AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              --env AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              --env S3_BUCKET_NAME="${{ secrets.STAGE_S3_BUCKET_NAME }}" \
+              --env STORAGE_CDN_URL="${{ secrets.STAGE_STORAGE_CDN_URL }}" \
+              --env EXPORT_QUEUE_URL="${{ vars.EXPORT_QUEUE_URL_STAGE }}" \
+              $REPO_URI:\$IMAGE_TAG
+            sudo docker image prune -f
+            sudo docker system prune --all --volumes --force
+          EOF
+          rm private_key.pem
+
+      - name: Notify Google Chat - Stage Success
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"✅ Connexus & SOW-RFQ deployed to Stage.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Notify Google Chat on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❗ Deployment failed for job: ${{ github.job }}.\n\nSee logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+  deploy-background-prod:
+    if: github.ref == 'refs/heads/prod'
+    runs-on: blacksmith-arm
+    timeout-minutes: 25
+    env:
+      IMAGE_NAME: connexus-prod-api
+      AWS_REGION: us-east-1
+      ENVIRONMENT: prod
+      CONTAINER_NAME: background-app-prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Notify Google Chat - Starting Prod Deployment
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚀 Starting deployment of background-jobs to Prod.\"}" $WEBHOOK_URL
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set environment variables
+        run: echo "REPOSITORY_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image for background-jobs
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/background-jobs/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.REPOSITORY_URI }}:background-jobs-${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.REPOSITORY_URI }}:buildcache
+          cache-to: type=inline
+          build-args: |
+            NODE_ENV=prod
+
+      - name: Deploy background-app container using SSM
+        run: |
+          aws ssm send-command \
+            --region ${{ env.AWS_REGION }} \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=instanceIds,Values=${{ secrets.EC2_INSTANCE_ID_PROD }}" \
+            --parameters 'commands=[
+              "sudo usermod -aG docker $(whoami)",
+              "sudo aws ecr get-login-password --region ${{ env.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ env.REPOSITORY_URI }}",
+              "sudo docker system prune -a -f",
+              "sudo docker pull ${{ env.REPOSITORY_URI }}:background-jobs-${{ github.sha }}",
+              "CONTAINER_ID=$(sudo docker ps -aq -f name=${{ env.CONTAINER_NAME }}); if [ ! -z \"$CONTAINER_ID\" ]; then sudo docker stop $CONTAINER_ID || true; sudo docker rm $CONTAINER_ID || true; fi",
+              "sudo docker run -d --restart unless-stopped --name ${{ env.CONTAINER_NAME }} \
+                --env NODE_ENV=\"production\" \
+                --env DATABASE_URL=\"${{ secrets.AWS_LOCAL_PROD_DB_SECRET }}\" \
+                --env SHADOW_DATABASE_URL=\"${{ secrets.AWS_LOCAL_PROD_SHADOW_DB_SECRET }}\" \
+                --env AWS_REGION=\"${{ secrets.PROD_COGNITO_REGION }}\" \
+                --env AWS_ACCESS_KEY_ID=\"${{ secrets.AWS_ACCESS_KEY_ID }}\" \
+                --env AWS_SECRET_ACCESS_KEY=\"${{ secrets.AWS_SECRET_ACCESS_KEY }}\" \
+                --env S3_BUCKET_NAME=\"${{ secrets.PROD_S3_BUCKET_NAME }}\" \
+                --env STORAGE_CDN_URL=\"${{ secrets.PROD_STORAGE_CDN_URL }}\" \
+                --env EXPORT_QUEUE_URL=\"${{ vars.EXPORT_QUEUE_URL_PROD }}\" \
+                ${{ env.REPOSITORY_URI }}:background-jobs-${{ github.sha }}",
+              "echo \"Checking if the container is running...\"",
+              "sudo docker ps -a -f name=${{ env.CONTAINER_NAME }} || true"
+            ]' \
+            --comment "Deploying background-job container to prod"
+
+      - name: Notify Google Chat - Prod Success
+        env:
+          WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"✅ Connexus backgroundjobs deployed to *Production*.\n\n Commit: ${{ github.event.head_commit.message }}\"}" $WEBHOOK_URL
+
+      - name: Notify Google Chat on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❗ Production deployment failed for job: ${{ github.job }}.\n\nSee logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

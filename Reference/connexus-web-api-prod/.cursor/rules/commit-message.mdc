@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+---
+
+### 📝 Commit Message Guidelines
+
+We follow the [Conventional Commits](mdc:https:/www.conventionalcommits.org/en/v1.0.0) specification with an enforced **120-character limit** on the commit header.
+
+#### ✅ Format
+
+- `type`: Type of change (`feat`, `fix`, `chore`, `docs`, `refactor`, etc.)
+- `scope`: _(optional)_ What part of the codebase is affected
+- `subject`: Short description (≤ 120 characters)
+
+#### 🔧 Example
+
+`feat(auth): add support for multi-factor authentication`
+
+#### ❌ Avoid
+
+- Long subject lines over 120 characters
+- Non-conventional messages like `updated stuff` or `fixed bug`
+
+---
+
+### 🛡️ Commit Message Linting
+
+We use [`commitlint`](mdc:https:/github.com/conventional-changelog/commitlint) and [`husky`](mdc:https:/github.com/typicode/husky) to automatically enforce commit message standards.
+
+#### ⚙️ Setup (Already configured in this project)
+
+- Commit messages **must follow Conventional Commits**
+- Headers must be **≤ 120 characters**

@@ -1,0 +1,37 @@
+FROM node:lts-alpine
+
+# Set the environment
+ENV NODE_ENV=development
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy package files and workspace configuration
+COPY package.json yarn.lock ./
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY prisma ./prisma/
+COPY apps/sow-rfq/package.json ./apps/sow-rfq/
+COPY libs ./libs/
+
+# Install dependencies
+RUN yarn install
+
+# Copy the rest of the application files
+COPY apps/sow-rfq ./apps/sow-rfq/
+
+# Generate Prisma client
+RUN yarn prisma:generate
+
+# Expose the application port
+EXPOSE 3001
+# Expose Prisma Studio port
+EXPOSE 5555
+
+# Set permissions for the node user
+RUN chown -R node /usr/src/app
+
+# Use the node user to run the application
+USER node
+
+# Start the application in development mode
+CMD ["yarn", "start:dev", "sow-rfq"] 

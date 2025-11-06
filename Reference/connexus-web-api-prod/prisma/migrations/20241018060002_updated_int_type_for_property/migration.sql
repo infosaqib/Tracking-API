@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "ClientProperties" ALTER COLUMN "unitCount" SET DATA TYPE BIGINT,
+ALTER COLUMN "buildingCount" SET DATA TYPE BIGINT,
+ALTER COLUMN "floorCount" SET DATA TYPE BIGINT;

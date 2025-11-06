@@ -1,0 +1,967 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  buyer
+  seller
+  admin
+}
+
+enum SubscriptionPlan {
+  free
+  basic
+  premium
+  enterprise
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  processing
+  shipped
+  delivered
+  cancelled
+  refunded
+  returned
+  failed
+}
+
+enum PaymentMethod {
+  stripe
+  paypal
+  bank_transfer
+  cash_on_delivery
+  cryptocurrency
+}
+
+enum PaymentStatus {
+  pending
+  processing
+  completed
+  failed
+  refunded
+  cancelled
+}
+
+enum TrackingStatus {
+  pending
+  confirmed
+  picked_up
+  in_transit
+  out_for_delivery
+  delivered
+  exception
+  returned
+  cancelled
+  delayed
+}
+
+enum Carrier {
+  ups
+  fedex
+  dhl
+  usps
+  local
+  custom
+}
+
+enum ProductStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum ProductVisibility {
+  public
+  private
+  unlisted
+}
+
+enum CategoryAttributeType {
+  text
+  number
+  boolean
+  select
+  multiselect
+  date
+}
+
+enum WarehouseStatus {
+  active
+  inactive
+  maintenance
+  closed
+}
+
+enum InventoryStatus {
+  active
+  inactive
+  quarantine
+  discontinued
+}
+
+enum MovementType {
+  inbound
+  outbound
+  transfer
+  adjustment
+  reservation
+  release
+  return
+  damage
+  loss
+}
+
+enum AlertType {
+  low_stock
+  high_stock
+  reorder_point
+  negative_stock
+  expired
+  damaged
+  quarantine
+}
+
+enum AlertSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+model User {
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  password               String
+  firstName              String
+  lastName               String
+  role                   UserRole   @default(buyer)
+  isActive               Boolean   @default(true)
+  isEmailVerified        Boolean   @default(false)
+  emailVerificationToken String?
+  emailVerificationExpires DateTime?
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
+  lastLogin              DateTime?
+  loginAttempts          Int       @default(0)
+  lockUntil              DateTime?
+  
+  // Profile
+  avatar                 String?
+  phone                  String?
+  addressStreet          String?
+  addressCity            String?
+  addressState           String?
+  addressZipCode         String?
+  addressCountry         String?
+  
+  // Preferences
+  language               String    @default("en")
+  currency               String    @default("USD")
+  notificationsEmail     Boolean   @default(true)
+  notificationsSms       Boolean   @default(false)
+  notificationsPush      Boolean   @default(true)
+  
+  // Business Info
+  companyName            String?
+  businessType           String?
+  taxId                  String?
+  website                String?
+  businessDescription    String?
+  
+  // OAuth
+  googleId               String?
+  googleEmail            String?
+  facebookId             String?
+  facebookEmail          String?
+  
+  // Subscription
+  subscriptionPlan       SubscriptionPlan @default(free)
+  subscriptionStartDate  DateTime?
+  subscriptionEndDate    DateTime?
+  subscriptionActive     Boolean   @default(true)
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  
+  // Relations
+  orders                 Order[]
+  products               Product[]
+  apiKeys                ApiKey[]
+  categoriesCreated      Category[] @relation("CategoryCreator")
+  categoriesModified     Category[] @relation("CategoryModifier")
+  warehousesCreated      Warehouse[] @relation("WarehouseCreator")
+  warehousesModified     Warehouse[] @relation("WarehouseModifier")
+  
+  @@index([email])
+  @@index([role])
+  @@index([subscriptionPlan])
+  @@map("users")
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  key         String   @unique
+  permissions String[]
+  isActive    Boolean  @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  parentId    String?
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  level       Int      @default(0)
+  path        String[] @default([])
+  
+  imageUrl    String?
+  imageAlt   String?
+  icon        String?
+  color       String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  
+  // SEO
+  seoTitle    String?
+  seoDescription String?
+  seoKeywords String[]
+  
+  // Analytics
+  productCount Int     @default(0)
+  viewCount    Int     @default(0)
+  lastUpdated  DateTime?
+  
+  createdById  String?
+  createdBy    User?   @relation("CategoryCreator", fields: [createdById], references: [id])
+  modifiedById String?
+  modifiedBy   User?   @relation("CategoryModifier", fields: [modifiedById], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  products     Product[] @relation("CategoryProducts")
+  subproducts  Product[] @relation("CategorySubproducts")
+  attributes   CategoryAttribute[]
+  
+  @@index([slug])
+  @@index([parentId])
+  @@index([level])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model CategoryAttribute {
+  id          String   @id @default(uuid())
+  categoryId  String
+  name        String
+  type        CategoryAttributeType @default(text)
+  options     String[]
+  isRequired  Boolean  @default(false)
+  isFilterable Boolean @default(true)
+  isSearchable Boolean @default(true)
+  
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  @@index([categoryId])
+  @@map("category_attributes")
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  
+  // Address
+  addressStreet String
+  addressCity   String
+  addressState  String
+  addressZipCode String
+  addressCountry String
+  latitude      Float?
+  longitude     Float?
+  
+  // Contact
+  phone       String?
+  email       String?
+  managerName String?
+  managerPhone String?
+  managerEmail String?
+  
+  // Capacity
+  capacityTotal Float
+  capacityUsed  Float    @default(0)
+  capacityUnit  String   @default("sqft")
+  
+  status      WarehouseStatus @default(active)
+  isDefault   Boolean   @default(false)
+  timezone    String    @default("UTC")
+  
+  // Capabilities
+  temperatureControlled Boolean @default(false)
+  hazardousMaterials   Boolean @default(false)
+  fragileHandling      Boolean @default(false)
+  highValueSecurity    Boolean @default(false)
+  crossDocking         Boolean @default(false)
+  sameDayShipping     Boolean @default(false)
+  
+  createdById  String?
+  createdBy    User?   @relation("WarehouseCreator", fields: [createdById], references: [id])
+  modifiedById String?
+  modifiedBy   User?   @relation("WarehouseModifier", fields: [modifiedById], references: [id])
+  notes        String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  inventories  Inventory[]
+  zones        WarehouseZone[]
+  carriers     WarehouseCarrier[]
+  shippingZones WarehouseShippingZone[]
+  
+  @@index([code])
+  @@index([status])
+  @@index([isDefault])
+  @@map("warehouses")
+}
+
+model WarehouseZone {
+  id          String   @id @default(uuid())
+  warehouseId String
+  name        String
+  code        String
+  type        String   @default("storage")
+  capacity    Float?
+  tempMin     Float?
+  tempMax     Float?
+  tempUnit    String   @default("celsius")
+  isActive    Boolean  @default(true)
+  
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([warehouseId])
+  @@map("warehouse_zones")
+}
+
+model WarehouseCarrier {
+  id            String   @id @default(uuid())
+  warehouseId   String
+  name          Carrier
+  isActive      Boolean  @default(true)
+  accountNumber String?
+  pickupTime    String?
+  cutoffTime    String?
+  
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([warehouseId])
+  @@map("warehouse_carriers")
+}
+
+model WarehouseShippingZone {
+  id          String   @id @default(uuid())
+  warehouseId String
+  name        String
+  countries   String[]
+  states      String[]
+  zipCodes    String[]
+  transitTimeMin Int?
+  transitTimeMax Int?
+  transitTimeUnit String @default("days")
+  cost        Float?
+  
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([warehouseId])
+  @@map("warehouse_shipping_zones")
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  shortDescription String?
+  sku             String   @unique
+  barcode         String?  @unique
+  categoryId      String
+  subcategoryId   String?
+  brand           String?
+  
+  // Price
+  priceCurrent    Float
+  priceOriginal   Float?
+  currency        String   @default("USD")
+  
+  status          ProductStatus @default(draft)
+  visibility      ProductVisibility @default(public)
+  
+  // SEO
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String[]
+  slug            String   @unique
+  
+  sellerId        String
+  tags            String[]
+  
+  // Inventory
+  inventoryQuantity     Int     @default(0)
+  inventoryReserved     Int     @default(0)
+  inventoryLowThreshold Int     @default(10)
+  inventoryTrackQuantity Boolean @default(true)
+  inventoryAllowBackorder Boolean @default(false)
+  
+  // Dimensions
+  dimensionLength Float?
+  dimensionWidth  Float?
+  dimensionHeight Float?
+  dimensionUnit   String   @default("cm")
+  weightValue     Float?
+  weightUnit      String   @default("kg")
+  
+  // Shipping
+  shippingWeight  Float?
+  shippingLength  Float?
+  shippingWidth   Float?
+  shippingHeight  Float?
+  freeShipping    Boolean  @default(false)
+  shippingClass   String?
+  
+  isDigital       Boolean  @default(false)
+  
+  // Analytics
+  views           Int      @default(0)
+  purchases       Int      @default(0)
+  wishlist        Int      @default(0)
+  ratingAverage   Float    @default(0)
+  ratingCount     Int      @default(0)
+  
+  // Availability
+  availabilityStartDate DateTime?
+  availabilityEndDate   DateTime?
+  isAvailable           Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  category        Category  @relation("CategoryProducts", fields: [categoryId], references: [id])
+  subcategory     Category? @relation("CategorySubproducts", fields: [subcategoryId], references: [id])
+  seller          User     @relation(fields: [sellerId], references: [id])
+  images          ProductImage[]
+  attributes      ProductAttribute[]
+  variants        ProductVariant[]
+  digitalFiles    ProductDigitalFile[]
+  channels        ProductChannel[]
+  orderItems      OrderItem[]
+  inventories     Inventory[]
+  
+  @@index([name])
+  @@index([description])
+  @@index([sku])
+  @@index([slug])
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([status])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@map("product_images")
+}
+
+model ProductAttribute {
+  id        String   @id @default(uuid())
+  productId String
+  name      String
+  value     String
+  type      String   @default("text")
+  
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@map("product_attributes")
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  name      String
+  sku       String
+  price     Float
+  isActive  Boolean  @default(true)
+  
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributes Json    @default("[]")
+  images    String[]
+  
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model ProductDigitalFile {
+  id        String   @id @default(uuid())
+  productId String
+  name      String
+  url       String
+  size      Int
+  type      String
+  
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@map("product_digital_files")
+}
+
+model ProductChannel {
+  id          String   @id @default(uuid())
+  productId   String
+  name        String
+  externalId  String?
+  isActive    Boolean  @default(true)
+  lastSync    DateTime?
+  syncStatus  String   @default("pending")
+  
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@map("product_channels")
+}
+
+model Inventory {
+  id            String   @id @default(uuid())
+  productId     String
+  variantId     String?
+  warehouseId   String
+  
+  quantityAvailable Int  @default(0)
+  quantityReserved  Int  @default(0)
+  quantityIncoming  Int  @default(0)
+  quantityOutgoing  Int  @default(0)
+  
+  // Thresholds
+  lowStockThreshold   Int  @default(10)
+  highStockThreshold  Int  @default(1000)
+  reorderPoint       Int  @default(5)
+  reorderQuantity    Int  @default(50)
+  
+  // Cost
+  unitCost      Float?
+  totalCost     Float?
+  currency      String  @default("USD")
+  costLastUpdated DateTime?
+  
+  // Location
+  aisle         String?
+  shelf         String?
+  bin           String?
+  zone          String?
+  
+  status        InventoryStatus @default(active)
+  
+  // Expiry
+  hasExpiry     Boolean @default(false)
+  expiryDate    DateTime?
+  batchNumber   String?
+  lotNumber     String?
+  
+  // Analytics
+  turnoverRate  Float   @default(0)
+  averageStock  Float   @default(0)
+  stockoutDays  Int     @default(0)
+  lastMovement  DateTime?
+  movementCount Int     @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  product       Product  @relation(fields: [productId], references: [id])
+  warehouse     Warehouse @relation(fields: [warehouseId], references: [id])
+  movements     InventoryMovement[]
+  alerts        InventoryAlert[]
+  
+  @@unique([productId, warehouseId])
+  @@index([warehouseId])
+  @@index([status])
+  @@index([quantityAvailable])
+  @@map("inventories")
+}
+
+model InventoryMovement {
+  id          String       @id @default(uuid())
+  inventoryId String
+  type        MovementType
+  quantity    Int
+  reason      String?
+  reference   String?
+  userId      String?
+  notes       String?
+  metadata    Json?
+  timestamp   DateTime     @default(now())
+  
+  inventory  Inventory    @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  
+  @@index([inventoryId])
+  @@index([timestamp])
+  @@map("inventory_movements")
+}
+
+model InventoryAlert {
+  id          String        @id @default(uuid())
+  inventoryId String
+  type        AlertType
+  message     String
+  severity    AlertSeverity @default(medium)
+  isActive    Boolean       @default(true)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  
+  inventory   Inventory     @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime      @default(now())
+  
+  @@index([inventoryId])
+  @@index([isActive])
+  @@map("inventory_alerts")
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  orderNumber   String      @unique
+  customerId    String
+  
+  status        OrderStatus @default(pending)
+  
+  // Payment
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(pending)
+  paymentTransactionId String?
+  paymentGatewayResponse Json?
+  
+  paymentSubtotal Float
+  paymentTax      Float     @default(0)
+  paymentShipping Float     @default(0)
+  paymentDiscount Float     @default(0)
+  paymentTotal    Float
+  paymentCurrency String    @default("USD")
+  paymentPaidAt    DateTime?
+  paymentRefundedAt DateTime?
+  paymentRefundAmount Float  @default(0)
+  
+  // Shipping Address
+  shippingFirstName  String
+  shippingLastName   String
+  shippingCompany    String?
+  shippingStreet     String
+  shippingCity       String
+  shippingState      String
+  shippingZipCode    String
+  shippingCountry    String
+  shippingPhone      String?
+  
+  shippingMethod     String
+  shippingCarrier    Carrier?
+  shippingTrackingNumber String?
+  shippingEstimatedDelivery DateTime?
+  shippingActualDelivery DateTime?
+  shippingNotes      String?
+  
+  // Billing Address
+  billingFirstName   String?
+  billingLastName    String?
+  billingCompany     String?
+  billingStreet      String?
+  billingCity        String?
+  billingState       String?
+  billingZipCode     String?
+  billingCountry     String?
+  billingPhone       String?
+  useShippingAddress Boolean @default(true)
+  
+  // Tracking
+  trackingId         String?  @unique
+  trackingStatus     TrackingStatus @default(pending)
+  trackingLastUpdate DateTime?
+  trackingEstimatedDelivery DateTime?
+  trackingActualDelivery DateTime?
+  trackingCarrier    String?
+  trackingCarrierTrackingNumber String?
+  
+  // Notes
+  customerNotes      String?
+  internalNotes      String?
+  shippingNotesInternal String?
+  
+  // Metadata
+  source            String    @default("website")
+  userAgent         String?
+  ipAddress         String?
+  referrer          String?
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign      String?
+  utmTerm           String?
+  utmContent        String?
+  
+  // Fulfillment
+  warehouse         String?
+  pickedBy          String?
+  packedBy          String?
+  shippedBy         String?
+  pickedAt          DateTime?
+  packedAt          DateTime?
+  shippedAt         DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  // Relations
+  customer          User      @relation(fields: [customerId], references: [id])
+  items             OrderItem[]
+  timeline          OrderTimeline[]
+  trackingLog       TrackingLog?
+  returns           OrderReturn[]
+  
+  @@index([orderNumber])
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([trackingId])
+  @@index([createdAt(sort: Desc)])
+  @@map("orders")
+}
+
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String
+  productId     String
+  variantId     String?
+  quantity      Int
+  price         Float
+  total         Float
+  
+  product       Product  @relation(fields: [productId], references: [id])
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  attributes    Json     @default("[]")
+  
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderTimeline {
+  id          String   @id @default(uuid())
+  orderId     String
+  status      String
+  description String
+  userId      String?
+  metadata    Json?
+  timestamp   DateTime @default(now())
+  
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@index([orderId])
+  @@index([timestamp])
+  @@map("order_timeline")
+}
+
+model OrderReturn {
+  id            String   @id @default(uuid())
+  orderId       String
+  reason        String
+  description   String?
+  status        String   @default("requested")
+  requestedAt   DateTime @default(now())
+  processedAt   DateTime?
+  refundAmount  Float?
+  items         Json     @default("[]")
+  
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@index([orderId])
+  @@map("order_returns")
+}
+
+model TrackingLog {
+  id            String   @id @default(uuid())
+  trackingId    String   @unique
+  orderId       String   @unique
+  
+  // Carrier
+  carrierName   Carrier
+  carrierTrackingNumber String
+  carrierService String?
+  carrierAccountNumber String?
+  
+  // Status
+  statusCurrent TrackingStatus @default(pending)
+  statusPrevious String?
+  statusLastUpdated DateTime @default(now())
+  
+  // Location
+  currentLocationName String?
+  currentLocationStreet String?
+  currentLocationCity String?
+  currentLocationState String?
+  currentLocationZipCode String?
+  currentLocationCountry String?
+  currentLatitude Float?
+  currentLongitude Float?
+  
+  destinationLocationName String?
+  destinationLocationStreet String?
+  destinationLocationCity String?
+  destinationLocationState String?
+  destinationLocationZipCode String?
+  destinationLocationCountry String?
+  destinationLatitude Float?
+  destinationLongitude Float?
+  
+  // Delivery
+  estimatedDeliveryDate DateTime?
+  estimatedDeliveryTimeStart String?
+  estimatedDeliveryTimeEnd String?
+  estimatedDeliveryConfidence Int?
+  
+  actualDeliveryDate DateTime?
+  actualDeliveryTime String?
+  actualDeliverySignature String?
+  actualDeliveryRecipient String?
+  
+  // Predictions
+  predictedDeliveryDate DateTime?
+  predictedConfidence Float?
+  predictedLastCalculated DateTime?
+  
+  isActive     Boolean  @default(true)
+  lastWebhookUpdate DateTime?
+  lastCarrierUpdate DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  order         Order    @relation(fields: [orderId], references: [id])
+  events        TrackingEvent[]
+  deliveryAttempts TrackingDeliveryAttempt[]
+  exceptions    TrackingException[]
+  notifications TrackingNotification[]
+  
+  @@index([trackingId])
+  @@index([orderId])
+  @@index([carrierTrackingNumber])
+  @@index([statusCurrent])
+  @@map("tracking_logs")
+}
+
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  trackingLogId String
+  status      String
+  description String
+  locationName String?
+  locationStreet String?
+  locationCity String?
+  locationState String?
+  locationZipCode String?
+  locationCountry String?
+  latitude    Float?
+  longitude   Float?
+  timestamp   DateTime @default(now())
+  source      String   @default("system")
+  details     Json?
+  isDelivered Boolean  @default(false)
+  isException Boolean  @default(false)
+  
+  trackingLog TrackingLog @relation(fields: [trackingLogId], references: [id], onDelete: Cascade)
+  
+  @@index([trackingLogId])
+  @@index([timestamp])
+  @@map("tracking_events")
+}
+
+model TrackingDeliveryAttempt {
+  id          String   @id @default(uuid())
+  trackingLogId String
+  attempt     Int
+  date        DateTime
+  time        String?
+  reason      String?
+  location    String?
+  nextAttempt DateTime?
+  
+  trackingLog TrackingLog @relation(fields: [trackingLogId], references: [id], onDelete: Cascade)
+  
+  @@index([trackingLogId])
+  @@map("tracking_delivery_attempts")
+}
+
+model TrackingException {
+  id          String   @id @default(uuid())
+  trackingLogId String
+  type        String
+  description String?
+  severity    String   @default("medium")
+  reportedAt  DateTime @default(now())
+  resolvedAt  DateTime?
+  resolution  String?
+  isResolved  Boolean  @default(false)
+  
+  trackingLog TrackingLog @relation(fields: [trackingLogId], references: [id], onDelete: Cascade)
+  
+  @@index([trackingLogId])
+  @@index([isResolved])
+  @@map("tracking_exceptions")
+}
+
+model TrackingNotification {
+  id          String   @id @default(uuid())
+  trackingLogId String
+  type        String
+  recipient   String
+  message     String
+  sentAt      DateTime @default(now())
+  status      String   @default("pending")
+  response    Json?
+  
+  trackingLog TrackingLog @relation(fields: [trackingLogId], references: [id], onDelete: Cascade)
+  
+  @@index([trackingLogId])
+  @@map("tracking_notifications")
+}
+

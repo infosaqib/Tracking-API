@@ -1,0 +1,6 @@
+-- AlterEnum
+ALTER TYPE "UserStatus" ADD VALUE 'PENDING';
+
+-- AlterTable
+ALTER TABLE "Users" ALTER COLUMN "status" DROP NOT NULL,
+ALTER COLUMN "status" DROP DEFAULT;
