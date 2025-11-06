@@ -1,6 +1,0 @@
--- AlterTable
-ALTER TABLE "Users"
-ADD COLUMN "fullName" TEXT NOT NULL DEFAULT '',
-    ADD COLUMN "phoneCode" VARCHAR(20),
-    ALTER COLUMN "title" DROP NOT NULL,
-    ALTER COLUMN "phoneNumber" DROP NOT NULL;
